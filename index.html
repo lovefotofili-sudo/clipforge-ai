@@ -1407,7 +1407,8 @@ async function findBestMoments() {
           addMomentToQueue(item,item.highlightCategory);
           if(momentQueue.length>before)added++;
         });
-        $('smartStatus').textContent=added?added+' selected clip(s) from '+collectionGroups.length+' collection(s) added to the queue.':'Selected clips are already in the queue.';
+        const queuedCollectionCount=collectionGroups.filter(group=>group.items.some(entry=>selectedCollectionClips.has(entry.momentIndex))).length;
+        $('smartStatus').textContent=added?added+' selected clip(s) from '+queuedCollectionCount+' selected collection(s) added to the queue.':'Selected clips are already in the queue.';
       };
       renderCollectionManager();
       [...$('momentList').querySelectorAll('[data-preview]')].forEach(button=>button.addEventListener('click',()=>{
