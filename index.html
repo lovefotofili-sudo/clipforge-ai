@@ -239,7 +239,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
             <button type="button" class="secondary" id="endForward">End +0.1s</button>
           </div>
         </div>
-        <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Ranks moments using sustained activity, local action bursts, consistency and scene-change checks, with extended clip boundaries to better capture the full action. It still does not understand story or subjects.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div><div class="queuebox"><div class="queuehead"><span>CLIP QUEUE</span><span id="queueCount">0 selected</span></div><div id="queueList" class="queueempty">Add suggested moments to build an export queue.</div><div class="queueactions"><button type="button" class="secondary" id="exportNext" disabled>Export next clip</button><button type="button" class="secondary" id="clearQueue" disabled>Clear queue</button></div><p class="preview-help">Export clips one at a time to keep memory use lower on phones. Download each MP4 before exporting the next.</p></div></div>
+        <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Ranks moments using sustained activity, local action bursts, consistency and scene-change checks, with extended clip boundaries to better capture the full action. It still does not understand story or subjects.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div><div class="queuebox"><div class="queuehead"><span>CLIP QUEUE</span><span id="queueCount">0 selected</span></div><div id="queueList" class="queueempty">Add suggested moments to build an export queue.</div><div class="queueactions"><button type="button" class="secondary" id="exportNext" disabled>Export all clips</button><button type="button" class="secondary" id="downloadZip" disabled>↓ Download completed ZIP</button><button type="button" class="secondary" id="clearQueue" disabled>Clear queue</button></div><p class="preview-help">Each clip gets a numbered filename with its time range. Download individual MP4s or package completed clips into one ZIP. ZIP creation needs extra free device memory.</p></div></div>
         <div class="clip-preview-panel">
           <div><div class="smarttitle">▶ CLIP PREVIEW</div><p class="preview-help">Preview your selected start and end times here. Output ratio and framing settings are separate below.</p></div>
           <button type="button" class="secondary previewclipbtn" id="previewClip" disabled>▶ Preview selected clip</button>
@@ -328,7 +328,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
       </section>
     </div>
   </main>
-  <div class="foot">CLIPFORGE AI · V2.33 · CLIPPING WORKSPACE</div>
+  <div class="foot">CLIPFORGE AI · V2.34 · SMART CLIP PACKAGING</div>
 </div>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -1335,6 +1335,42 @@ function applyMoment(moment) {
   $('smartStatus').textContent = 'Moment selected. Preview it before exporting.';
   source.currentTime = Number(moment.start);
 }
+
+function clipTimeLabel(seconds) {
+  const total=Math.max(0,Math.floor(Number(seconds)||0));
+  return String(Math.floor(total/60)).padStart(2,'0')+'m'+String(total%60).padStart(2,'0')+'s';
+}
+function makeClipFilename(item,index) {
+  return 'clipforge-clip-'+String(index+1).padStart(2,'0')+'_'+clipTimeLabel(item.start)+'-'+clipTimeLabel(Math.min(source.duration||item.end,item.end))+'.mp4';
+}
+function zipCrc32(bytes) {
+  let crc=0xffffffff;
+  for(let i=0;i<bytes.length;i++){crc^=bytes[i];for(let j=0;j<8;j++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);}
+  return (crc^0xffffffff)>>>0;
+}
+function zipDosStamp(date=new Date()) {
+  return {time:(date.getHours()<<11)|(date.getMinutes()<<5)|Math.floor(date.getSeconds()/2),date:((date.getFullYear()-1980)<<9)|((date.getMonth()+1)<<5)|date.getDate()};
+}
+async function buildStoredZip(entries) {
+  const encoder=new TextEncoder(),localParts=[],centralParts=[];
+  let offset=0;
+  const stamp=zipDosStamp();
+  for(const entry of entries){
+    const name=encoder.encode(entry.name),data=new Uint8Array(await entry.blob.arrayBuffer());
+    const crc=zipCrc32(data),local=new Uint8Array(30+name.length),lv=new DataView(local.buffer);
+    lv.setUint32(0,0x04034b50,true);lv.setUint16(4,20,true);lv.setUint16(6,0x0800,true);lv.setUint16(8,0,true);
+    lv.setUint16(10,stamp.time,true);lv.setUint16(12,stamp.date,true);lv.setUint32(14,crc,true);lv.setUint32(18,data.length,true);lv.setUint32(22,data.length,true);lv.setUint16(26,name.length,true);lv.setUint16(28,0,true);local.set(name,30);
+    localParts.push(local,data);
+    const central=new Uint8Array(46+name.length),cv=new DataView(central.buffer);
+    cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint16(8,0x0800,true);cv.setUint16(10,0,true);
+    cv.setUint16(12,stamp.time,true);cv.setUint16(14,stamp.date,true);cv.setUint32(16,crc,true);cv.setUint32(20,data.length,true);cv.setUint32(24,data.length,true);
+    cv.setUint16(28,name.length,true);cv.setUint16(30,0,true);cv.setUint16(32,0,true);cv.setUint16(34,0,true);cv.setUint16(36,0,true);cv.setUint32(38,0,true);cv.setUint32(42,offset,true);central.set(name,46);
+    centralParts.push(central);offset+=local.length+data.length;
+  }
+  const centralSize=centralParts.reduce((sum,part)=>sum+part.length,0),end=new Uint8Array(22),ev=new DataView(end.buffer);
+  ev.setUint32(0,0x06054b50,true);ev.setUint16(4,0,true);ev.setUint16(6,0,true);ev.setUint16(8,entries.length,true);ev.setUint16(10,entries.length,true);ev.setUint32(12,centralSize,true);ev.setUint32(16,offset,true);ev.setUint16(20,0,true);
+  return new Blob([...localParts,...centralParts,end],{type:'application/zip'});
+}
 function renderMomentQueue() {
   const list = $('queueList');
   if (!list) return;
@@ -1343,12 +1379,13 @@ function renderMomentQueue() {
   $('queueCount').textContent = momentQueue.length + ' clips · ' + completed + ' complete' + (failed?' · '+failed+' failed':'');
   $('clearQueue').disabled = busy || momentQueue.length === 0;
   $('exportNext').disabled = busy || !fileBytesReady || !momentQueue.some(item=>item.status==='pending' || item.status==='failed');
+  $('downloadZip').disabled = busy || !momentQueue.some(item=>item.status==='completed' && item.downloadBlob);
   $('exportNext').textContent = 'Export all clips';
   if (!momentQueue.length) { list.className='queueempty'; list.textContent='Add suggested moments to build an export queue.'; updateButtons(); return; }
   list.className='';
   list.innerHTML = momentQueue.map((m,i)=>{
     const state=m.status==='completed'?'✓ Complete':m.status==='failed'?'Failed · retry available':m.status==='exporting'?'Exporting · '+(m.progress||0)+'%':'Waiting';
-    const download=m.status==='completed'&&m.downloadURL?'<a class="filebtn" style="padding:6px 9px;font-size:10px;text-decoration:none" href="'+m.downloadURL+'" download="clipforge-clip-'+(i+1)+'.mp4">↓ MP4</a>':'';
+    const download=m.status==='completed'&&m.downloadURL?'<a class="filebtn" style="padding:6px 9px;font-size:10px;text-decoration:none" href="'+m.downloadURL+'" download="'+makeClipFilename(m,i)+'">↓ MP4</a>':'';
     const retry=m.status==='failed'?'<button type="button" class="secondary" data-retry="'+i+'">Retry</button>':'';
     const reorder=m.status==='pending'?'<button type="button" class="secondary" data-up="'+i+'" '+(i===0?'disabled':'')+'>↑</button> <button type="button" class="secondary" data-down="'+i+'" '+(i===momentQueue.length-1?'disabled':'')+'>↓</button>':'';
     const remove=m.status!=='exporting'?'<button type="button" class="secondary" data-remove="'+i+'">✕</button>':'';
@@ -1376,11 +1413,28 @@ function startNextQueuedExport() {
 }
 function addMomentToQueue(moment) {
   if (!moment || momentQueue.some(x=>Math.abs(x.start-moment.start)<0.4 && Math.abs(x.end-moment.end)<0.8)) return;
-  momentQueue.push({...moment,id:++queueCounter,status:'pending',downloadURL:null});
+  momentQueue.push({...moment,id:++queueCounter,status:'pending',downloadURL:null,downloadBlob:null});
   renderMomentQueue();
   $('smartStatus').textContent='Moment added to the clip queue.';
 }
 $('clearQueue').addEventListener('click',()=>{if(busy)return;momentQueue.forEach(item=>{if(item.downloadURL)URL.revokeObjectURL(item.downloadURL);});momentQueue=[];activeQueueId=null;queueAutoRun=false;renderMomentQueue();});
+
+$('downloadZip').addEventListener('click',async()=>{
+  if(busy)return;
+  const completed=momentQueue.map((item,index)=>({item,index})).filter(x=>x.item.status==='completed'&&x.item.downloadBlob);
+  if(!completed.length)return;
+  $('downloadZip').disabled=true;
+  $('smartStatus').textContent='Packaging '+completed.length+' completed clip(s) into a ZIP… Keep this tab open.';
+  try{
+    const entries=completed.map(({item,index})=>({name:makeClipFilename(item,index),blob:item.downloadBlob}));
+    const zip=await buildStoredZip(entries),url=URL.createObjectURL(zip),link=document.createElement('a');
+    link.href=url;link.download='clipforge-completed-clips.zip';document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+    $('smartStatus').textContent='ZIP ready · '+completed.length+' completed MP4 clip(s) packaged.';
+  }catch(error){
+    $('smartStatus').textContent='ZIP packaging failed: '+(error?.message||String(error))+'. Individual MP4 downloads are still available.';
+  }finally{renderMomentQueue();}
+});
 $('exportNext').addEventListener('click',()=>{
   if (busy || !fileBytesReady || !momentQueue.some(item=>item.status==='pending' || item.status==='failed')) return;
   queueAutoRun=true;
@@ -1769,7 +1823,7 @@ $('export').addEventListener('click', async () => {
     setStatus(`Finished! Your MP4 is ready (${formatBytes(data.length)}).`, 'good');
     if (activeQueueId !== null) {
       const finished=momentQueue.find(item=>item.id===activeQueueId);
-      if(finished){finished.status='completed';finished.downloadURL=URL.createObjectURL(outputBlob);}
+      if(finished){finished.status='completed';finished.downloadBlob=outputBlob;finished.downloadURL=URL.createObjectURL(outputBlob);}
       activeQueueId=null;renderMomentQueue();
       if(queueAutoRun){queueContinuePending=true;$('smartStatus').textContent='Clip complete. Preparing the next queued export…';}
       else $('smartStatus').textContent='Clip exported. Its MP4 is saved in the queue row; retry any failed clips there.';
