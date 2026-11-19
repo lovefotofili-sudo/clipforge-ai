@@ -37,7 +37,8 @@ button:hover,.filebtn:hover{filter:brightness(1.12);transform:translateY(-1px)}b
 .timeline-legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:10px;margin-top:3px}
 .timeline-legend span{display:inline-flex;align-items:center;gap:5px}.timeline-legend i{display:inline-block;width:12px;height:5px;border-radius:4px;background:#a78bfa}.timeline-legend .boundary{width:2px;height:11px;background:#f3e8ff}
 
-.timeline{margin-top:12px;padding:11px 12px;background:#0b0a11;border:1px solid var(--line);border-radius:12px}.timeline-top{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:11px;margin-bottom:7px}.timeline input{width:100%;accent-color:var(--purple);margin:0;touch-action:pan-y}.timeline-actions{display:flex;justify-content:space-between;gap:8px;margin-top:8px}.timeline-actions button{padding:7px 11px;font-size:11px}.timeline-time{font-variant-numeric:tabular-nums;color:#d9cbff}
+.timeline{margin-top:12px;padding:11px 12px;background:#0b0a11;border:1px solid var(--line);border-radius:12px}.timeline-top{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:11px;margin-bottom:7px}.timeline input{width:100%;accent-color:var(--purple);margin:0;touch-action:pan-y}.timeline-actions{display:flex;justify-content:space-between;gap:8px;margin-top:8px}
+.timeline-jump-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.timeline-jump-actions button{padding:8px 10px;font-size:11px}.timeline-tap-hint{font-size:10px;color:var(--muted);margin:7px 0 0;text-align:center}.timeline-scrub-wrap input{cursor:pointer}.timeline-actions button{padding:7px 11px;font-size:11px}.timeline-time{font-variant-numeric:tabular-nums;color:#d9cbff}
 .formatbox{margin-top:14px;padding:13px;border:1px solid #463565;border-radius:12px;background:#171326}
 .formatrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
 .formatrow select,.formatrow input{width:100%;background:#0b0a11;border:1px solid #39334b;border-radius:10px;color:white;padding:10px;font:inherit;font-size:12px}
@@ -204,7 +205,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
         <div class="filemeta" id="filemeta">No video selected yet.</div>
         <video id="source" class="preview" controls playsinline preload="metadata" webkit-playsinline style="display:none"></video>
 <div id="subtitleOverlay" class="subtitle-overlay" aria-live="off"></div>
-        <div class="timeline" id="timeline" style="display:none"><div class="timeline-top"><span>VIDEO TIMELINE</span><span class="timeline-time" id="timelineTime">0:00 / 0:00</span></div><div class="timeline-scrub-wrap"><div class="timeline-visual-track" aria-hidden="true"><div class="timeline-selected" id="timelineSelected"></div><i class="timeline-marker" id="timelineStartMarker"></i><i class="timeline-marker" id="timelineEndMarker"></i><i class="timeline-playhead" id="timelinePlayhead"></i></div><input id="scrubber" type="range" min="0" max="0" step="0.1" value="0" aria-label="Scrub through video and selected clip"></div><div class="timeline-legend"><span><i></i> Selected clip</span><span><i class="boundary"></i> Trim boundaries</span></div><div class="timeline-actions"><button type="button" class="secondary" id="backFive">↶ 5 sec</button><button type="button" class="secondary" id="forwardFive">5 sec ↷</button></div></div>
+        <div class="timeline" id="timeline" style="display:none"><div class="timeline-top"><span>VIDEO TIMELINE</span><span class="timeline-time" id="timelineTime">0:00 / 0:00</span></div><div class="timeline-scrub-wrap"><div class="timeline-visual-track" aria-hidden="true"><div class="timeline-selected" id="timelineSelected"></div><i class="timeline-marker" id="timelineStartMarker"></i><i class="timeline-marker" id="timelineEndMarker"></i><i class="timeline-playhead" id="timelinePlayhead"></i></div><input id="scrubber" type="range" min="0" max="0" step="0.1" value="0" aria-label="Scrub through video and selected clip"></div><div class="timeline-legend"><span><i></i> Selected clip</span><span><i class="boundary"></i> Trim boundaries</span></div><div class="timeline-jump-actions"><button type="button" class="secondary" id="jumpClipStart">◀ Clip start</button><button type="button" class="secondary" id="jumpClipEnd">Clip end ▶</button></div><div class="timeline-actions"><button type="button" class="secondary" id="backFive">↶ 5 sec</button><button type="button" class="secondary" id="forwardFive">5 sec ↷</button></div><p class="timeline-tap-hint">Tap or drag the timeline to move the playhead.</p></div>
         <iframe id="ytPreview" class="ytpreview" title="YouTube video preview" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="display:none"></iframe>
         <div class="filemeta" id="ytInfo" style="display:none;margin-top:8px"></div>
         <div class="empty" id="empty">Your video preview will appear here after upload or YouTube link preview.</div>
@@ -543,9 +544,22 @@ function updateTimeline() {
   $('timelineTime').textContent = formatClock(playhead) + ' / ' + formatClock(duration);
   $('timeline').style.display = selectedFile && duration > 0 ? 'block' : 'none';
 }
+function jumpTimelineTo(time) {
+  if (!selectedFile || !Number.isFinite(source.duration)) return;
+  if (clipPreviewing) stopClipPreview();
+  const target = Math.max(0,Math.min(source.duration,Number(time)||0));
+  try { source.currentTime = target; } catch {}
+  updateTimeline();
+}
 $('scrubber').addEventListener('input', () => {
-  if (selectedFile && Number.isFinite(source.duration)) source.currentTime = Number($('scrubber').value);
+  if (selectedFile && Number.isFinite(source.duration)) {
+    if (clipPreviewing) stopClipPreview();
+    source.currentTime = Number($('scrubber').value);
+    updateTimeline();
+  }
 });
+$('jumpClipStart').addEventListener('click',()=>jumpTimelineTo(timeValue($('start').value)));
+$('jumpClipEnd').addEventListener('click',()=>jumpTimelineTo(timeValue($('end').value)));
 let clipPreviewing = false;
 let clipPreviewToken = 0;
 let clipPreviewWatchTimer = null;
