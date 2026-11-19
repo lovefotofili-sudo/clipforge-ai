@@ -1042,6 +1042,7 @@ async function loadEngine() {
     $('progress').value = Math.max(0, Math.min(1, progress || 0));
     const percent = Math.round(Math.max(0, Math.min(1, progress || 0))*100);
     $('exportProgressText').textContent = `${ffmpegProgressLabel}: ${percent}%`;
+    if(activeQueueId!==null){const active=momentQueue.find(item=>item.id===activeQueueId);if(active){active.progress=percent;const row=[...$('queueList').querySelectorAll('.queueitem')].find((_,index)=>momentQueue[index]?.id===activeQueueId);if(row){const label=row.querySelector('small');if(label)label.textContent='Exporting · '+percent+'%';}}}
     setStatus(`${ffmpegProgressLabel}… ${percent}%`);
   });
   try {
@@ -1345,7 +1346,7 @@ function renderMomentQueue() {
   if (!momentQueue.length) { list.className='queueempty'; list.textContent='Add suggested moments to build an export queue.'; updateButtons(); return; }
   list.className='';
   list.innerHTML = momentQueue.map((m,i)=>{
-    const state=m.status==='completed'?'✓ Complete':m.status==='failed'?'Failed · retry available':m.status==='exporting'?'Exporting…':'Waiting';
+    const state=m.status==='completed'?'✓ Complete':m.status==='failed'?'Failed · retry available':m.status==='exporting'?'Exporting · '+(m.progress||0)+'%':'Waiting';
     const download=m.status==='completed'&&m.downloadURL?'<a class="filebtn" style="padding:6px 9px;font-size:10px;text-decoration:none" href="'+m.downloadURL+'" download="clipforge-clip-'+(i+1)+'.mp4">↓ MP4</a>':'';
     const retry=m.status==='failed'?'<button type="button" class="secondary" data-retry="'+i+'">Retry</button>':'';
     const reorder=m.status==='pending'?'<button type="button" class="secondary" data-up="'+i+'" '+(i===0?'disabled':'')+'>↑</button> <button type="button" class="secondary" data-down="'+i+'" '+(i===momentQueue.length-1?'disabled':'')+'>↓</button>':'';
