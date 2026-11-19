@@ -60,7 +60,7 @@ button:hover,.filebtn:hover{filter:brightness(1.12);transform:translateY(-1px)}b
 
 .empty{border:1px solid var(--line);border-radius:13px;background:#09080e;color:#777184;min-height:170px;display:grid;place-items:center;text-align:center;padding:20px;font-size:13px}
 .controls{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}.field input{width:100%;background:#0b0a11;border:1px solid #39334b;border-radius:10px;color:white;padding:11px;font:inherit}
-.hint{font-size:11px;color:var(--muted);margin-top:9px}.smartbox{margin-top:14px;padding:13px;border:1px solid #463565;border-radius:12px;background:#171326}.smarttitle{font-size:12px;font-weight:800;color:#d8c8ff;margin-bottom:5px}.smartdesc{font-size:11px;color:var(--muted);margin:0 0 10px}.smartbtn{width:100%}.momentlist{display:grid;gap:8px;margin-top:10px}.moment{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px;background:#0d0b14;border:1px solid var(--line);border-radius:9px;font-size:11px}.moment span{color:#e6dcff}.moment button{padding:7px 10px;font-size:11px;white-space:nowrap}.smartstatus{font-size:11px;color:var(--muted);margin-top:8px;min-height:16px}.duration{font-size:12px;color:#c7b5f5;margin-top:10px}
+.hint{font-size:11px;color:var(--muted);margin-top:9px}.smartbox{margin-top:14px;padding:13px;border:1px solid #463565;border-radius:12px;background:#171326}.smarttitle{font-size:12px;font-weight:800;color:#d8c8ff;margin-bottom:5px}.smartdesc{font-size:11px;color:var(--muted);margin:0 0 10px}.smartbtn{width:100%}.momentlist{display:grid;gap:8px;margin-top:10px}.moment{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px;background:#0d0b14;border:1px solid var(--line);border-radius:9px;font-size:11px}.moment span{color:#e6dcff}.moment button{padding:7px 10px;font-size:11px;white-space:nowrap}.moment-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.queuebox{margin-top:12px;padding:12px;border:1px solid #463565;border-radius:11px;background:#100e18}.queuehead{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;color:#d8c8ff;font-weight:800}.queueitem{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;margin-top:7px;background:#0b0a11;border:1px solid var(--line);border-radius:8px;font-size:11px}.queueitem button{padding:6px 8px;font-size:10px}.queueactions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.queueactions button{width:100%;padding:9px 8px;font-size:11px}.queueempty{font-size:11px;color:var(--muted);margin-top:8px}.smartstatus{font-size:11px;color:var(--muted);margin-top:8px;min-height:16px}.duration{font-size:12px;color:#c7b5f5;margin-top:10px}
 .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.primary{width:100%;padding:14px;font-size:14px}
 .status{margin-top:15px;padding:11px 12px;border-radius:10px;background:#0b0a11;border:1px solid var(--line);font-size:12px;color:var(--muted);min-height:42px;overflow-wrap:anywhere}
 .status.good{color:var(--good);border-color:#285a48}.status.bad{color:var(--danger);border-color:#633535}
@@ -73,7 +73,7 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.7.0 · SMART HIGHLIGHT FINDER</span>
+    <span class="badge">V2.8.0 · SMART HIGHLIGHT FINDER</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -118,7 +118,7 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
           <div class="field"><label for="end">End time (seconds)</label><input id="end" type="number" min="0" step="0.1" value="10" placeholder="e.g. 9" inputmode="decimal"></div>
         </div>
         <p class="hint">Enter seconds only (for example, 3 and 9 — no colon). Or pause the preview and use “Set start” or “Set end”.</p>
-        <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Ranks moments using sustained activity, local action bursts, consistency and scene-change checks, with extended clip boundaries to better capture the full action. It still does not understand story or subjects.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div></div>
+        <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Ranks moments using sustained activity, local action bursts, consistency and scene-change checks, with extended clip boundaries to better capture the full action. It still does not understand story or subjects.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div><div class="queuebox"><div class="queuehead"><span>CLIP QUEUE</span><span id="queueCount">0 selected</span></div><div id="queueList" class="queueempty">Add suggested moments to build an export queue.</div><div class="queueactions"><button type="button" class="secondary" id="exportNext" disabled>Export next clip</button><button type="button" class="secondary" id="clearQueue" disabled>Clear queue</button></div><p class="preview-help">Export clips one at a time to keep memory use lower on phones. Download each MP4 before exporting the next.</p></div></div>
         <div class="clip-preview-panel">
           <div><div class="smarttitle">▶ CLIP PREVIEW</div><p class="preview-help">Preview your selected start and end times here. Output ratio and framing settings are separate below.</p></div>
           <button type="button" class="secondary previewclipbtn" id="previewClip" disabled>▶ Preview selected clip</button>
@@ -180,7 +180,7 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
       </section>
     </div>
   </main>
-  <div class="foot">CLIPFORGE AI · V2.7.0 · SMART MOMENT FINDER</div>
+  <div class="foot">CLIPFORGE AI · V2.8.0 · SMART MOMENT FINDER</div>
 </div>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -188,6 +188,9 @@ const source = $('source');
 let ffmpeg = null;
 let engineReady = false;
 let busy = false;
+let momentQueue = [];
+let activeQueueId = null;
+let queueCounter = 0;
 
 async function fetchFile(file) {
   return new Uint8Array(await file.arrayBuffer());
@@ -229,6 +232,8 @@ function validateTimes() {
 function updateButtons() {
   if (typeof enableAutoTranscribe === 'function') enableAutoTranscribe();
   $('findMoments').disabled = busy || momentScanBusy || !selectedFile || !Number.isFinite(source.duration);
+  $('exportNext').disabled = busy || !fileBytesReady || momentQueue.length === 0;
+  $('clearQueue').disabled = busy || momentQueue.length === 0;
   $('export').disabled = busy || !fileBytesReady || !validateTimes();
   $('setStart').disabled = busy || !selectedFile;
   $('setEnd').disabled = busy || !selectedFile;
@@ -319,7 +324,7 @@ function useFile(file) {
   $('youtubeUrl').value = '';
   if (sourceURL) { URL.revokeObjectURL(sourceURL); sourceURL = null; }
   if (outputURL) { URL.revokeObjectURL(outputURL); outputURL = null; }
-  $('momentList').innerHTML = ''; $('smartStatus').textContent = 'Ready to scan this video.';
+  $('momentList').innerHTML = ''; momentQueue = []; renderMomentQueue(); $('smartStatus').textContent = 'Ready to scan this video.';
   $('download').style.display = 'none';
   source.pause();
   source.removeAttribute('src');
@@ -763,8 +768,9 @@ async function findBestMoments() {
   source.pause();
   try {
     const duration = source.duration;
-    const step = Math.max(0.75, duration / 90);
-    const width = 64, height = 36;
+    const step = Math.max(0.75, duration / 60);
+    // Smaller analysis frames and a 60-sample ceiling reduce seek and pixel work on phones.
+    const width = 48, height = 27;
     const canvas = document.createElement('canvas');
     canvas.width = width; canvas.height = height;
     const ctx = canvas.getContext('2d', {willReadFrequently:true});
@@ -832,12 +838,16 @@ async function findBestMoments() {
     const clipLengths = [3,5,8,12].filter(len => len <= duration);
     if (!clipLengths.length) clipLengths.push(duration);
     const frameActivity = x => x.motion*0.55 + x.coverage*13 + Math.min(x.cut,0.6)*3;
-    const globalActivityBaseline = percentile(samples.map(frameActivity).sort((a,b)=>a-b),0.50);
+    const activityValues = samples.map(frameActivity);
+    const globalActivityBaseline = percentile([...activityValues].sort((a,b)=>a-b),0.50);
+    const lowerBoundTime = (time) => { let lo=0, hi=samples.length; while(lo<hi){const mid=(lo+hi)>>1;if(samples[mid].time<time)lo=mid+1;else hi=mid;} return lo; };
     for (const clipLength of clipLengths) {
       for (let start = 0; start + clipLength <= duration + 0.001; start += stride) {
-        const inside = samples.filter(x => x.time >= start && x.time < start + clipLength);
-        if (inside.length < 3) continue;
-        const activities = inside.map(frameActivity);
+        const insideStart = lowerBoundTime(start);
+        const insideEnd = lowerBoundTime(start + clipLength);
+        if (insideEnd - insideStart < 3) continue;
+        const inside = samples.slice(insideStart, insideEnd);
+        const activities = activityValues.slice(insideStart, insideEnd);
         const sortedActivity = [...activities].sort((a,b)=>a-b);
         const avgActivity = mean(activities);
         const medianActivity = percentile(sortedActivity,0.50);
@@ -883,9 +893,9 @@ async function findBestMoments() {
         let lastActiveTime = start + clipLength;
         const extensionLimit = Math.min(duration, start + clipLength + 4.5);
         const completionPadding = Math.max(0.65, step*0.65);
-        for (const sample of samples) {
-          if (sample.time < start + clipLength || sample.time > extensionLimit) continue;
-          const activity = frameActivity(sample);
+        for (let sampleIndex = insideEnd; sampleIndex < samples.length && samples[sampleIndex].time <= extensionLimit; sampleIndex++) {
+          const sample = samples[sampleIndex];
+          const activity = activityValues[sampleIndex];
           if (activity >= boundaryFloor) {
             lastActiveTime = sample.time;
             quietSamples = 0;
@@ -924,17 +934,9 @@ async function findBestMoments() {
       $('smartStatus').textContent = 'No strong visual activity was detected. Try another video or set the trim points manually.';
     } else {
       $('smartStatus').textContent = 'Done. Ranked by sustained activity and distinct bursts; near-duplicate moments were filtered where possible. Clip endings allow a longer quiet period before treating the action as finished. This is visual analysis, not story understanding.';
-      $('momentList').innerHTML = chosen.map((m,i)=>'<div class="moment"><span>Moment '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(duration,m.end).toFixed(1)+'s</span><button type="button" data-moment="'+i+'">Use this</button></div>').join('');
-      [...$('momentList').querySelectorAll('[data-moment]')].forEach(button=>{
-        button.addEventListener('click',()=>{
-          const m=chosen[Number(button.dataset.moment)];
-          $('start').value=m.start.toFixed(1);
-          $('end').value=Math.min(duration,m.end).toFixed(1);
-          updateButtons();
-          $('smartStatus').textContent='Moment selected. Preview it before exporting.';
-          source.currentTime=m.start;
-        });
-      });
+      $('momentList').innerHTML = chosen.map((m,i)=>'<div class="moment"><span>Moment '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(duration,m.end).toFixed(1)+'s</span><div class="moment-actions"><button type="button" class="secondary" data-moment="'+i+'">Use</button><button type="button" data-queue="'+i+'">＋ Queue</button></div></div>').join('');
+      [...$('momentList').querySelectorAll('[data-moment]')].forEach(button=>button.addEventListener('click',()=>applyMoment(chosen[Number(button.dataset.moment)])));
+      [...$('momentList').querySelectorAll('[data-queue]')].forEach(button=>button.addEventListener('click',()=>addMomentToQueue(chosen[Number(button.dataset.queue)])));
     }
   } catch(err) {
     $('smartStatus').textContent='Scan could not finish: '+(err?.message||String(err));
@@ -947,6 +949,43 @@ async function findBestMoments() {
 }
 $('findMoments').addEventListener('click', findBestMoments);
 
+function applyMoment(moment) {
+  if (!moment) return;
+  $('start').value = Number(moment.start).toFixed(1);
+  $('end').value = Math.min(source.duration, Number(moment.end)).toFixed(1);
+  updateButtons();
+  $('smartStatus').textContent = 'Moment selected. Preview it before exporting.';
+  source.currentTime = Number(moment.start);
+}
+function renderMomentQueue() {
+  const list = $('queueList');
+  if (!list) return;
+  $('queueCount').textContent = momentQueue.length + ' selected';
+  $('clearQueue').disabled = busy || momentQueue.length === 0;
+  $('exportNext').disabled = busy || !fileBytesReady || momentQueue.length === 0;
+  if (!momentQueue.length) { list.className='queueempty'; list.textContent='Add suggested moments to build an export queue.'; updateButtons(); return; }
+  list.className='';
+  list.innerHTML = momentQueue.map((m,i)=>'<div class="queueitem"><span>Clip '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(source.duration,m.end).toFixed(1)+'s</span><span><button type="button" class="secondary" data-up="'+i+'" '+(i===0?'disabled':'')+'>↑</button> <button type="button" class="secondary" data-down="'+i+'" '+(i===momentQueue.length-1?'disabled':'')+'>↓</button> <button type="button" class="secondary" data-remove="'+i+'">✕</button></span></div>').join('');
+  list.querySelectorAll('[data-up]').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.up);[momentQueue[i-1],momentQueue[i]]=[momentQueue[i],momentQueue[i-1]];renderMomentQueue();}));
+  list.querySelectorAll('[data-down]').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.down);[momentQueue[i+1],momentQueue[i]]=[momentQueue[i],momentQueue[i+1]];renderMomentQueue();}));
+  list.querySelectorAll('[data-remove]').forEach(b=>b.addEventListener('click',()=>{momentQueue.splice(Number(b.dataset.remove),1);renderMomentQueue();}));
+  updateButtons();
+}
+function addMomentToQueue(moment) {
+  if (!moment || momentQueue.some(x=>Math.abs(x.start-moment.start)<0.4 && Math.abs(x.end-moment.end)<0.8)) return;
+  momentQueue.push({...moment,id:++queueCounter});
+  renderMomentQueue();
+  $('smartStatus').textContent='Moment added to the clip queue.';
+}
+$('clearQueue').addEventListener('click',()=>{momentQueue=[];activeQueueId=null;renderMomentQueue();});
+$('exportNext').addEventListener('click',()=>{
+  if (!momentQueue.length || busy || !fileBytesReady) return;
+  const next=momentQueue[0];
+  applyMoment(next);
+  activeQueueId=next.id;
+  $('smartStatus').textContent='Exporting queued clip 1 of '+momentQueue.length+'. Download it when the MP4 is ready.';
+  $('export').click();
+});
 
 /* V1.7 subtitle editor: editable captions + local Whisper transcription + live preview + SRT export */
 let subtitleItems = [];
@@ -1253,6 +1292,10 @@ $('export').addEventListener('click', async () => {
     $('download').style.display = 'inline-flex';
     $('download').download = `clipforge-${Date.now()}.mp4`;
     setStatus(`Finished! Your MP4 is ready (${formatBytes(data.length)}).`, 'good');
+    if (activeQueueId !== null && momentQueue[0]?.id === activeQueueId) {
+      momentQueue.shift(); activeQueueId=null; renderMomentQueue();
+      $('smartStatus').textContent='Queued clip exported. Download it, then export the next clip when ready.';
+    }
     try { await ffmpeg.deleteFile(inputName); await ffmpeg.deleteFile(outputName); await ffmpeg.deleteFile('clipforge-font.ttf'); for (const name of subtitleFiles) await ffmpeg.deleteFile(name); } catch {}
   } catch (err) {
     console.error('[CLIPFORGE export error]', err);
