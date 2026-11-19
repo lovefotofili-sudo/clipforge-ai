@@ -179,7 +179,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.34 · CLIPPING WORKSPACE</span>
+    <span class="badge">V2.35 · SMART CLIP INTELLIGENCE</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -239,7 +239,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
             <button type="button" class="secondary" id="endForward">End +0.1s</button>
           </div>
         </div>
-        <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Ranks moments using sustained activity, local action bursts, consistency and scene-change checks, with extended clip boundaries to better capture the full action. It still does not understand story or subjects.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div><div class="queuebox"><div class="queuehead"><span>CLIP QUEUE</span><span id="queueCount">0 selected</span></div><div id="queueList" class="queueempty">Add suggested moments to build an export queue.</div><div class="queueactions"><button type="button" class="secondary" id="exportNext" disabled>Export all clips</button><button type="button" class="secondary" id="downloadZip" disabled>↓ Download completed ZIP</button><button type="button" class="secondary" id="clearQueue" disabled>Clear queue</button></div><p class="preview-help">Each clip gets a numbered filename with its time range. Download individual MP4s or package completed clips into one ZIP. ZIP creation needs extra free device memory.</p></div></div>
+        <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Ranks moments using sustained activity, action bursts, rising activity and scene-change checks. Each result explains its visual signal; this is heuristic analysis, not story or subject recognition.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div><div class="queuebox"><div class="queuehead"><span>CLIP QUEUE</span><span id="queueCount">0 selected</span></div><div id="queueList" class="queueempty">Add suggested moments to build an export queue.</div><div class="queueactions"><button type="button" class="secondary" id="exportNext" disabled>Export all clips</button><button type="button" class="secondary" id="downloadZip" disabled>↓ Download completed ZIP</button><button type="button" class="secondary" id="clearQueue" disabled>Clear queue</button></div><p class="preview-help">Each clip gets a numbered filename with its time range. Download individual MP4s or package completed clips into one ZIP. ZIP creation needs extra free device memory.</p></div></div>
         <div class="clip-preview-panel">
           <div><div class="smarttitle">▶ CLIP PREVIEW</div><p class="preview-help">Preview your selected start and end times here. Output ratio and framing settings are separate below.</p></div>
           <button type="button" class="secondary previewclipbtn" id="previewClip" disabled>▶ Preview selected clip</button>
@@ -328,7 +328,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
       </section>
     </div>
   </main>
-  <div class="foot">CLIPFORGE AI · V2.34 · SMART CLIP PACKAGING</div>
+  <div class="foot">CLIPFORGE AI · V2.35 · SMART CLIP INTELLIGENCE</div>
 </div>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -1219,10 +1219,18 @@ async function findBestMoments() {
         const lowSignalPenalty = avgActivity < 1.1 ? (1.1 - avgActivity)*0.8 : 0;
         // Prefer windows that rise above this video's own typical activity, not merely busy footage.
         const relativeLift = Math.max(-1, Math.min(1.5, (avgActivity-globalActivityBaseline)/Math.max(1.5,globalActivityBaseline)));
+        const thirdSize = Math.max(1, Math.floor(activities.length/3));
+        const earlyActivity = mean(activities.slice(0,thirdSize));
+        const lateActivity = mean(activities.slice(-thirdSize));
+        const buildUp = Math.max(-1, Math.min(1, (lateActivity-earlyActivity)/Math.max(2,medianActivity*1.5)));
+        const visualSignal = Math.min(100, Math.round(
+          Math.min(1,activeRatio/0.5)*38 + Math.min(1,burstDensity/0.5)*32
+          + Math.max(0,Math.min(1,relativeLift/0.75))*20 + Math.min(1,visualDetail/24)*10
+        ));
         const score = sustained*0.43 + avgActivity*0.08 + burst*0.17 + relativeLift*0.48
           + Math.min(burstProminence,10)*0.22 + burstDensity*0.72
           + consistency*0.88 + Math.min(sceneEvents,3)*0.14
-          + Math.min(visualDetail/22,3)*0.20
+          + Math.min(visualDetail/22,3)*0.20 + Math.max(-0.15,buildUp)*0.34
           - chaosPenalty - cutPenalty - lowSignalPenalty;
         // Give the action room to finish: add a little lead-in, then follow activity past
         // the nominal window until it settles, with a bounded extension for phone performance.
@@ -1269,7 +1277,7 @@ async function findBestMoments() {
           clipStart = Math.max(clipStart, proposedStart);
           clipEnd = Math.min(clipEnd, Math.max(clipStart+Math.min(2.5,clipLength*0.55),proposedEnd));
         }
-        candidates.push({start:clipStart,end:Math.max(clipStart+clipLength*0.55,clipEnd),score,clipLength,activeRatio,peakCount,refined:true});
+        candidates.push({start:clipStart,end:Math.max(clipStart+clipLength*0.55,clipEnd),score,clipLength,activeRatio,peakCount,burstDensity,relativeLift,buildUp,visualSignal,sceneEvents,refined:true});
       }
     }
     candidates.sort((a,b)=>b.score-a.score);
@@ -1296,18 +1304,21 @@ async function findBestMoments() {
     if (!chosen.length || chosen[0].score < 2.2) {
       $('smartStatus').textContent = 'No strong visual activity was detected. Try another video or set the trim points manually.';
     } else {
-      $('smartStatus').textContent = 'Done. Ranked by visual activity, then conservatively tightened quiet clip edges while keeping a lead-in and ending buffer. Near-duplicates were filtered. This is visual analysis, not story understanding.';
+      $('smartStatus').textContent = 'Done. Ranked by sustained action, bursts and rising activity. Near-duplicates were filtered. Signal scores describe visible motion patterns only — not story understanding.';
       const topScore = Math.max(0.01, ...chosen.map(item => item.score));
       const explainMoment = item => {
         const reasons = [];
         if (item.activeRatio >= 0.45) reasons.push('activity sustained');
         if (item.peakCount >= 2) reasons.push('several action bursts');
+        if (item.buildUp >= 0.18) reasons.push('activity builds');
         if (item.activeRatio < 0.45 && item.peakCount < 2) reasons.push('strongest local activity');
-        return reasons.join(' · ');
+        if (item.sceneEvents >= 4) reasons.push('frequent scene changes');
+        return reasons.join(' · ') || 'above-video-average activity';
       };
       $('momentList').innerHTML = chosen.map((m,i)=>{
         const rating = Math.max(1, Math.min(99, Math.round(m.score / topScore * 100)));
-        return '<div class="moment"><div class="moment-info"><strong>Moment '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(duration,m.end).toFixed(1)+'s</strong><small>Relative rank '+rating+' · '+explainMoment(m)+'</small></div><div class="moment-actions"><button type="button" class="secondary" data-preview="'+i+'">▶ Preview</button><button type="button" data-queue="'+i+'">＋ Queue</button></div></div>';
+        const signalLabel = m.visualSignal >= 70 ? 'Strong visual signal' : m.visualSignal >= 42 ? 'Mixed visual signal' : 'Limited visual signal';
+        return '<div class="moment"><div class="moment-info"><strong>Moment '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(duration,m.end).toFixed(1)+'s</strong><small>Relative rank '+rating+' · Visual signal '+m.visualSignal+'/100 ('+signalLabel.toLowerCase()+') · '+explainMoment(m)+'</small></div><div class="moment-actions"><button type="button" class="secondary" data-preview="'+i+'">▶ Preview</button><button type="button" data-queue="'+i+'">＋ Queue</button></div></div>';
       }).join('');
       [...$('momentList').querySelectorAll('[data-preview]')].forEach(button=>button.addEventListener('click',()=>{
         const moment = chosen[Number(button.dataset.preview)];
