@@ -44,7 +44,7 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
-        webView.loadUrl("https://clipforge-ai-beta-two.vercel.app");
+        webView.loadUrl("https://clipforge-ai-git-v29-android-apk-lovefotofili-7154.vercel.app");
     }
 
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
