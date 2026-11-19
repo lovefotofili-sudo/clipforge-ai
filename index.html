@@ -254,7 +254,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
       </section>
     </div>
   </main>
-  <div class="foot">CLIPFORGE AI · V2.15 · EXPORT BOOST</div>
+  <div class="foot">CLIPFORGE AI · V2.16 · HIGHLIGHT ACCURACY BOOST</div>
 </div>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -837,8 +837,8 @@ async function findBestMoments() {
   source.pause();
   try {
     const duration = source.duration;
-    const step = Math.max(1.5, duration / 18);
-    // Quick mobile scan: cap at 18 samples and use a tiny analysis frame.
+    const step = Math.max(1.0, duration / 22);
+    // Balanced mobile scan: cap at 22 samples and keep the analysis frame tiny.
     const width = 32, height = 18;
     const canvas = document.createElement('canvas');
     canvas.width = width; canvas.height = height;
@@ -896,15 +896,15 @@ async function findBestMoments() {
       }
       samples.push({time:t, motion, coverage:cellCount ? changedCells/cellCount : 0, cut, edgeEnergy});
       previous = {gray, meanLuma, meanR, meanG, meanB, histogram};
-      $('smartStatus').textContent = 'Quick scan… ' + Math.min(99, Math.round((samples.length / Math.max(1, Math.ceil(duration / step))) * 100)) + '%';
+      $('smartStatus').textContent = 'Accuracy scan… ' + Math.min(99, Math.round((samples.length / Math.max(1, Math.ceil(duration / step))) * 100)) + '%';
     }
     if (duration < 2.5 || samples.length < 4) throw new Error('This video is too short to analyse. Try a video at least 3 seconds long.');
     const candidates = [];
-    const stride = Math.max(0.35, step * 0.7);
+    const stride = Math.max(0.3, step * 0.55);
     const mean = arr => arr.reduce((a,b)=>a+b,0)/arr.length;
     const percentile = (arr,p) => arr[Math.min(arr.length-1,Math.floor((arr.length-1)*p))];
     // Evaluate several durations so short decisive moments and longer sequences can both rank well.
-    const clipLengths = [3,5,8,12].filter(len => len <= duration);
+    const clipLengths = [3,5,8,12,16,20].filter(len => len <= duration && len >= step*2.35);
     if (!clipLengths.length) clipLengths.push(duration);
     const frameActivity = x => x.motion*0.55 + x.coverage*13 + Math.min(x.cut,0.6)*3;
     const activityValues = samples.map(frameActivity);
@@ -946,9 +946,9 @@ async function findBestMoments() {
         const lowSignalPenalty = avgActivity < 1.1 ? (1.1 - avgActivity)*0.8 : 0;
         // Prefer windows that rise above this video's own typical activity, not merely busy footage.
         const relativeLift = Math.max(-1, Math.min(1.5, (avgActivity-globalActivityBaseline)/Math.max(1.5,globalActivityBaseline)));
-        const score = sustained*0.46 + avgActivity*0.10 + burst*0.14 + relativeLift*0.45
-          + Math.min(burstProminence,10)*0.18 + burstDensity*0.55
-          + consistency*1.05 + Math.min(sceneEvents,3)*0.16
+        const score = sustained*0.43 + avgActivity*0.08 + burst*0.17 + relativeLift*0.48
+          + Math.min(burstProminence,10)*0.22 + burstDensity*0.72
+          + consistency*0.88 + Math.min(sceneEvents,3)*0.14
           + Math.min(visualDetail/22,3)*0.20
           - chaosPenalty - cutPenalty - lowSignalPenalty;
         // Give the action room to finish: add a little lead-in, then follow activity past
@@ -1002,7 +1002,7 @@ async function findBestMoments() {
     if (!chosen.length || chosen[0].score < 2.2) {
       $('smartStatus').textContent = 'No strong visual activity was detected. Try another video or set the trim points manually.';
     } else {
-      $('smartStatus').textContent = 'Done. Ranked by sustained activity and distinct bursts; near-duplicate moments were filtered where possible. Clip endings allow a longer quiet period before treating the action as finished. This is visual analysis, not story understanding.';
+      $('smartStatus').textContent = 'Done. Ranked using denser sampling, action bursts and relative activity; near-duplicate moments were filtered where possible. Clip endings allow a longer quiet period before treating the action as finished. This is visual analysis, not story understanding.';
       $('momentList').innerHTML = chosen.map((m,i)=>'<div class="moment"><span>Moment '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(duration,m.end).toFixed(1)+'s</span><div class="moment-actions"><button type="button" class="secondary" data-moment="'+i+'">Use</button><button type="button" data-queue="'+i+'">＋ Queue</button></div></div>').join('');
       [...$('momentList').querySelectorAll('[data-moment]')].forEach(button=>button.addEventListener('click',()=>applyMoment(chosen[Number(button.dataset.moment)])));
       [...$('momentList').querySelectorAll('[data-queue]')].forEach(button=>button.addEventListener('click',()=>addMomentToQueue(chosen[Number(button.dataset.queue)])));
