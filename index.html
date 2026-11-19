@@ -179,7 +179,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.30 · CLIPPING WORKSPACE</span>
+    <span class="badge">V2.31 · CLIPPING WORKSPACE</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -1645,12 +1645,14 @@ $('export').addEventListener('click', async () => {
     const requestedRender = dimensions ? getRenderDimensions(dimensions) : null;
     const sourceFitsRequested = requestedRender && source.videoWidth <= requestedRender.width && source.videoHeight <= requestedRender.height;
     // Stream-copy only when no crop, resize or caption burn-in is required.
-    const needsTransform = Boolean(musicSnapshot || muteOriginalSnapshot || Number($('originalVolume').value)<100) || exportCaptions.length > 0 || Boolean(dimensions && (
+    const videoNeedsTransform = exportCaptions.length > 0 || Boolean(dimensions && (
       Math.abs(sourceRatio - targetRatio) > 0.012 || !sourceFitsRequested
     ));
+    const audioNeedsTransform = Boolean(musicSnapshot || muteOriginalSnapshot || Number($('originalVolume').value)<100);
+    const needsTransform = videoNeedsTransform || audioNeedsTransform;
     if (needsTransform) {
       let filter = '';
-      if (dimensions) {
+      if (videoNeedsTransform && dimensions) {
         const statusDims = getRenderDimensions(dimensions);
         const speedLabel = $('renderSize').value === 'quick' ? 'Quick 540p' : $('renderSize').value === 'fast' ? 'Fast 720p' : 'HD 1080p';
         ffmpegProgressLabel = 'Rendering your clip';
@@ -1666,8 +1668,11 @@ $('export').addEventListener('click', async () => {
         } else {
           filter = `scale=${renderDims.width}:${renderDims.height}:force_original_aspect_ratio=increase,crop=${renderDims.width}:${renderDims.height}:(iw-ow)*${cropX}/100:(ih-oh)*${cropY}/100,setsar=1`;
         }
-      } else {
+      } else if (videoNeedsTransform) {
         setStatus('Burning ' + exportCaptions.length + ' subtitle segment(s) into the MP4 at original size…');
+      } else {
+        $('exportStage').textContent = 'Step 3 of 4 · Mixing audio without re-encoding video';
+        setStatus('Mixing audio while copying the original video stream — this should be much faster…');
       }
       if (exportFilter) filter = filter ? filter + ',' + exportFilter : exportFilter;
 
@@ -1681,12 +1686,16 @@ $('export').addEventListener('click', async () => {
         audioArgs.push('-filter_complex',graph);audioMap=['-map','[aout]'];
       }else if(muteOriginalSnapshot)audioMap=['-an'];
       else if(Number($('originalVolume').value)<100)audioArgs.push('-af','volume='+(Number($('originalVolume').value)/100).toFixed(2));
-      exitCode=await ffmpeg.exec(['-ss',String(start),'-i',inputName,...audioArgs,'-t',String(length),'-map','0:v:0',...audioMap,'-vf',filter,'-c:v','libx264','-preset','ultrafast','-crf','23','-pix_fmt','yuv420p',...(musicSnapshot||!muteOriginalSnapshot?['-c:a','aac','-b:a','128k']:[]),'-movflags','+faststart','-sn','-dn',outputName]);
+      const videoOutputArgs = videoNeedsTransform
+        ? ['-vf',filter,'-c:v','libx264','-preset','ultrafast','-crf','23','-pix_fmt','yuv420p']
+        : ['-c:v','copy'];
+      const audioCodecArgs = (musicSnapshot || !muteOriginalSnapshot) ? ['-c:a','aac','-b:a','128k'] : [];
+      exitCode=await ffmpeg.exec(['-ss',String(start),'-i',inputName,...audioArgs,'-t',String(length),'-map','0:v:0',...audioMap,...videoOutputArgs,...audioCodecArgs,'-movflags','+faststart','-sn','-dn',outputName]);
       if(exitCode!==0&&musicSnapshot&&!muteOriginalSnapshot){
         try{await ffmpeg.deleteFile(outputName);}catch{}
         const delay=Math.max(0,musicStartSnapshot-start),trim=Math.max(0,start-musicStartSnapshot),musicDuration=Math.max(.05,length-delay),musicExt=(musicSnapshot.name.split('.').pop()||'mp3').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp3';
         const graph='[1:a]atrim=start='+trim.toFixed(3)+':duration='+musicDuration.toFixed(3)+',asetpts=PTS-STARTPTS,volume='+musicVolumeSnapshot.toFixed(2)+',adelay='+Math.round(delay*1000)+'|'+Math.round(delay*1000)+'[aout]';
-        exitCode=await ffmpeg.exec(['-ss',String(start),'-i',inputName,'-i','clipforge-music.'+musicExt,'-t',String(length),'-filter_complex',graph,'-map','0:v:0','-map','[aout]','-vf',filter,'-c:v','libx264','-preset','ultrafast','-crf','23','-pix_fmt','yuv420p','-c:a','aac','-b:a','128k','-movflags','+faststart','-sn','-dn',outputName]);
+        exitCode=await ffmpeg.exec(['-ss',String(start),'-i',inputName,'-i','clipforge-music.'+musicExt,'-t',String(length),'-filter_complex',graph,'-map','0:v:0','-map','[aout]',...videoOutputArgs,'-c:a','aac','-b:a','128k','-movflags','+faststart','-sn','-dn',outputName]);
       }
     } else {
       ffmpegProgressLabel = 'Copying your clip';
