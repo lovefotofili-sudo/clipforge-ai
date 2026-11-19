@@ -179,7 +179,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.28 · CLIPPING WORKSPACE</span>
+    <span class="badge">V2.29 · CLIPPING WORKSPACE</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -476,6 +476,10 @@ function tryDataUrlFallback(file, attempt) {
       // Retry Android gallery-provider files through the File/Blob API.
       const bytes = await file.arrayBuffer();
       if (attempt !== loadAttempt || !bytes.byteLength) throw new Error('Empty video data');
+      // Keep a durable in-memory copy for export; do not rely on the picker handle later.
+      selectedFileBytes = new Uint8Array(bytes.slice(0));
+      fileBytesReady = true;
+      fileBytesPromise = Promise.resolve(selectedFileBytes);
       if (sourceURL) URL.revokeObjectURL(sourceURL);
       sourceURL = URL.createObjectURL(new Blob([bytes], {type:file.type || 'video/mp4'}));
       source.src = sourceURL;
@@ -493,7 +497,25 @@ function tryDataUrlFallback(file, attempt) {
   };
   reader.onload = () => {
     if (attempt !== loadAttempt) return;
-    source.src = String(reader.result);
+    const dataUrl = String(reader.result || '');
+    // A data-URL read can succeed on Android Gallery even when arrayBuffer() fails.
+    // Cache its decoded bytes now, while the picker grant is still valid.
+    try {
+      const comma = dataUrl.indexOf(',');
+      if (comma > 0 && /;base64/i.test(dataUrl.slice(0, comma))) {
+        const binary = atob(dataUrl.slice(comma + 1));
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        if (bytes.length) {
+          selectedFileBytes = bytes;
+          fileBytesReady = true;
+          fileBytesPromise = Promise.resolve(selectedFileBytes);
+        }
+      }
+    } catch (cacheError) {
+      console.warn('[CLIPFORGE] Could not cache Gallery video bytes from data URL', cacheError);
+    }
+    source.src = dataUrl;
     source.load();
     clearMediaLoadTimer();
     metadataTimer = setTimeout(() => {
