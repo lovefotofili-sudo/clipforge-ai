@@ -147,7 +147,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.10 · MOBILE EDITOR UPGRADE</span>
+    <span class="badge">V2.11 · FASTER MOBILE LOADING</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -290,7 +290,23 @@ async function toBlobURL(url, mimeType, label, onProgress) {
   }
   return URL.createObjectURL(new Blob(chunks, {type:mimeType}));
 }
-let selectedFile = null, selectedFileBytes = null, fileBytesReady = false, sourceURL = null, outputURL = null, outputBlob = null;
+let selectedFile = null, selectedFileBytes = null, fileBytesReady = false, fileBytesPromise = null, sourceURL = null, outputURL = null, outputBlob = null;
+async function ensureFileBytes(file = selectedFile) {
+  if (!file) throw new Error('Choose a video first.');
+  if (fileBytesReady && selectedFileBytes) return selectedFileBytes;
+  if (file !== selectedFile) throw new Error('The selected video changed. Choose it again.');
+  if (!fileBytesPromise) {
+    setStatus('Preparing video for processing…');
+    fileBytesPromise = file.arrayBuffer().then(buffer => {
+      if (file !== selectedFile) throw new Error('The selected video changed. Choose it again.');
+      selectedFileBytes = new Uint8Array(buffer);
+      fileBytesReady = true;
+      updateButtons();
+      return selectedFileBytes;
+    }).catch(error => { fileBytesPromise = null; throw error; });
+  }
+  return fileBytesPromise;
+}
 let metadataTimer = null, fileReaderFallbackTried = false, loadAttempt = 0;
 
 function setStatus(message, kind='') {
@@ -306,9 +322,9 @@ function validateTimes() {
 function updateButtons() {
   if (typeof enableAutoTranscribe === 'function') enableAutoTranscribe();
   $('findMoments').disabled = busy || momentScanBusy || !selectedFile || !Number.isFinite(source.duration);
-  $('exportNext').disabled = busy || !fileBytesReady || momentQueue.length === 0;
+  $('exportNext').disabled = busy || momentQueue.length === 0;
   $('clearQueue').disabled = busy || momentQueue.length === 0;
-  $('export').disabled = busy || !fileBytesReady || !validateTimes();
+  $('export').disabled = busy || !validateTimes();
   $('setStart').disabled = busy || !selectedFile;
   $('setEnd').disabled = busy || !selectedFile;
   $('previewClip').disabled = busy || !selectedFile || !validateTimes();
@@ -376,22 +392,7 @@ function useFile(file) {
   $('youtubeHelp').textContent = `Selected: ${file.name}. Your original video is ready for Best Moment Finder and MP4 export.`;
   selectedFileBytes = null;
   fileBytesReady = false;
-  // Snapshot the phone-selected file immediately, while Android's file permission is fresh.
-  // Export must use these bytes rather than reopening the original File after FFmpeg loads.
-  file.arrayBuffer().then(buffer => {
-    if (attempt !== loadAttempt || selectedFile !== file) return;
-    selectedFileBytes = new Uint8Array(buffer);
-    fileBytesReady = true;
-    if (Number.isFinite(source.duration) && source.duration > 0) {
-      setStatus('Video ready. Choose your trim and export when ready.', 'good');
-    }
-    updateButtons();
-  }).catch(error => {
-    if (attempt !== loadAttempt || selectedFile !== file) return;
-    console.error('[CLIPFORGE file snapshot error]', error);
-    setStatus('Could not prepare this video for export. Please select it again.', 'bad');
-    updateButtons();
-  });
+  fileBytesPromise = null;
   $('ytPreview').style.display = 'none';
   $('ytPreview').src = '';
   $('linknotice').style.display = 'none';
@@ -1195,6 +1196,7 @@ $('autoTranscribe').addEventListener('click', async()=>{
       });
     }
     setStatus('Preparing audio from your video…');
+    await ensureFileBytes();
     await loadEngine();
     const inputName='clipforge-transcribe-input';
     const audioName='clipforge-transcribe.wav';
@@ -1299,13 +1301,13 @@ $('export').addEventListener('click', async () => {
   $('progress').style.display = 'block'; $('progress').value = 0;
   $('download').style.display = 'none';
   try {
+    const inputBytes = await ensureFileBytes(fileSnapshot);
     await loadEngine();
     setStatus('Preparing your video…');
     const ext = (fileSnapshot.name.split('.').pop() || 'mp4').toLowerCase().replace(/[^a-z0-9]/g,'') || 'mp4';
     const inputName = `input.${ext}`;
     const outputName = 'clipforge-output.mp4';
-    if (!fileBytesReady || !selectedFileBytes) throw new Error('The selected video is not ready for export yet. Select it again and wait for the video to finish preparing.');
-    await ffmpeg.writeFile(inputName, selectedFileBytes.slice());
+    await ffmpeg.writeFile(inputName, inputBytes.slice());
     const start = startSnapshot;
     const length = endSnapshot - startSnapshot;
     let exitCode = 1;
