@@ -1125,7 +1125,28 @@ async function findBestMoments() {
           if (quietSamples >= 3) break;
         }
         clipEnd = Math.max(clipEnd, Math.min(duration, lastActiveTime + completionPadding));
-        candidates.push({start:clipStart,end:Math.max(clipStart+clipLength*0.55,clipEnd),score,clipLength,activeRatio,peakCount});
+        // V2.23: conservatively tighten quiet edges using the activity samples already collected.
+        // This adds no extra seeks, keeping the scan lightweight on mobile.
+        const refineThreshold = Math.max(1.0, globalActivityBaseline*0.72, medianActivity*0.62);
+        const refineFrom = lowerBoundTime(clipStart);
+        const refineTo = Math.max(refineFrom+1, lowerBoundTime(clipEnd));
+        let firstActive = -1, lastActive = -1;
+        for (let ri=refineFrom; ri<Math.min(samples.length,refineTo+1); ri++) {
+          if (activityValues[ri] >= refineThreshold) {
+            if (firstActive < 0) firstActive = ri;
+            lastActive = ri;
+          }
+        }
+        if (firstActive >= 0 && lastActive >= firstActive) {
+          const leadPadding = Math.max(0.55, step*0.55);
+          const tailPadding = Math.max(0.8, step*0.65);
+          const proposedStart = Math.max(0, samples[firstActive].time-leadPadding);
+          const proposedEnd = Math.min(duration, samples[lastActive].time+tailPadding);
+          // Only trim clearly quiet edges; never expand beyond the already-safe boundaries.
+          clipStart = Math.max(clipStart, proposedStart);
+          clipEnd = Math.min(clipEnd, Math.max(clipStart+Math.min(2.5,clipLength*0.55),proposedEnd));
+        }
+        candidates.push({start:clipStart,end:Math.max(clipStart+clipLength*0.55,clipEnd),score,clipLength,activeRatio,peakCount,refined:true});
       }
     }
     candidates.sort((a,b)=>b.score-a.score);
@@ -1152,7 +1173,7 @@ async function findBestMoments() {
     if (!chosen.length || chosen[0].score < 2.2) {
       $('smartStatus').textContent = 'No strong visual activity was detected. Try another video or set the trim points manually.';
     } else {
-      $('smartStatus').textContent = 'Done. Ranked using denser sampling, action bursts and relative activity; near-duplicate moments were filtered where possible. Clip endings allow a longer quiet period before treating the action as finished. This is visual analysis, not story understanding.';
+      $('smartStatus').textContent = 'Done. Ranked by visual activity, then conservatively tightened quiet clip edges while keeping a lead-in and ending buffer. Near-duplicates were filtered. This is visual analysis, not story understanding.';
       const topScore = Math.max(0.01, ...chosen.map(item => item.score));
       const explainMoment = item => {
         const reasons = [];
