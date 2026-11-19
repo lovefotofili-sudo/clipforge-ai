@@ -67,13 +67,87 @@ button:hover,.filebtn:hover{filter:brightness(1.12);transform:translateY(-1px)}b
 progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);display:none}
 .note{margin-top:18px;color:#888397;font-size:11px;line-height:1.6}.foot{margin-top:25px;color:#6f6a7e;font-size:11px;text-align:center}
 @media(max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding:18px 13px 45px}.card{padding:16px}.top{margin-bottom:24px}.preview{max-height:260px}}
+
+/* V2.10 — dedicated mobile editor experience */
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,.filebtn,input,select,textarea{touch-action:manipulation}
+button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #c4a7ff;outline-offset:2px}
+@media(max-width:760px){
+  body{min-height:100dvh}
+  .wrap{width:100%;max-width:680px;margin:0 auto;padding: max(14px,env(safe-area-inset-top)) 12px calc(34px + env(safe-area-inset-bottom))}
+  .top{align-items:flex-start;gap:8px;margin-bottom:20px}
+  .brand{gap:8px;font-size:13px;letter-spacing:.07em}
+  .logo{width:34px;height:34px;border-radius:10px;font-size:17px;flex:0 0 auto}
+  .badge{font-size:9px;padding:5px 7px;text-align:center;line-height:1.3;max-width:132px}
+  h1{font-size:clamp(29px,8vw,39px);line-height:1.06;margin-bottom:9px}
+  .sub{font-size:13px;line-height:1.55;margin-bottom:19px}
+  .grid{display:flex;flex-direction:column;gap:13px}
+  .card{width:100%;min-width:0;padding:15px;border-radius:16px}
+  .card h2{font-size:16px;margin-bottom:12px}
+  .drop{padding:22px 12px;border-radius:13px}
+  .drop p{font-size:12px}
+  button,.filebtn{min-height:44px;padding:11px 13px;font-size:13px;border-radius:10px}
+  .linkrow{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+  .linkrow input{width:100%;min-height:46px;font-size:16px;padding:11px 12px}
+  .linkrow button{width:100%}
+  .linkhelp{font-size:11px;line-height:1.5}
+  .preview{max-height:min(58vh,390px);min-height:120px;object-fit:contain;margin-top:12px}
+  .ytpreview{margin-top:12px}
+  .timeline{padding:12px 11px;margin-top:10px}
+  .timeline input,.framing input{min-height:32px;touch-action:pan-x}
+  .timeline-actions{gap:8px}
+  .timeline-actions button{min-height:40px;flex:1;padding:8px 7px}
+  .controls{grid-template-columns:1fr 1fr;gap:10px;margin-top:13px}
+  .field label{font-size:11px}
+  .field input{min-height:44px;font-size:16px;padding:10px}
+  .formatrow,.formatrow.three{grid-template-columns:1fr 1fr;gap:9px}
+  .formatrow select,.formatrow input{min-height:44px;font-size:16px;padding:9px}
+  .chooseclipbox,.formatbox,.subtitlebox,.smartbox,.queuebox,.clip-preview-panel{padding:11px;border-radius:12px}
+  .moment{align-items:flex-start;flex-wrap:wrap}
+  .moment-actions{width:100%;justify-content:flex-start}
+  .moment-actions button{flex:1;min-height:40px}
+  .queueitem{align-items:flex-start;flex-wrap:wrap}
+  .queueitem button{min-height:38px}
+  .queueactions{gap:8px}
+  .queueactions button{min-height:42px}
+  .subtitle-row{gap:7px}
+  .actions{display:grid;grid-template-columns:1fr;gap:9px;margin-top:14px}
+  .actions button,.primary,.outputpreviewbtn,.clip-preview-panel .previewclipbtn{width:100%;min-height:48px}
+  .status{font-size:12px;line-height:1.5;padding:11px;margin-top:12px}
+  .note{font-size:10px;line-height:1.55}
+  .foot{padding-bottom:8px}
+}
+@media(max-width:420px){
+  .wrap{padding-left:10px;padding-right:10px}
+  .top{flex-wrap:wrap;align-items:center}
+  .badge{max-width:none}
+  .card{padding:13px}
+  .controls{grid-template-columns:1fr}
+  .formatrow,.formatrow.three{grid-template-columns:1fr 1fr}
+  .subtitle-row{grid-template-columns:1fr 1fr auto}
+  .subtitle-row input[type=text]{grid-column:1/3;grid-row:2}
+  .subtitle-row button{grid-column:3;grid-row:1/3;height:100%;min-height:44px}
+  .queueactions{grid-template-columns:1fr 1fr}
+}
+@media(max-width:350px){
+  .formatrow,.formatrow.three{grid-template-columns:1fr}
+  .timeline-actions{flex-wrap:wrap}
+  .timeline-actions button{min-width:calc(50% - 4px)}
+}
+@media(orientation:landscape) and (max-height:520px) and (max-width:900px){
+  .wrap{max-width:900px;padding-top:10px}
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+  .preview{max-height:48vh}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
+
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.8.1 · SMART HIGHLIGHT FINDER</span>
+    <span class="badge">V2.10 · MOBILE EDITOR UPGRADE</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
