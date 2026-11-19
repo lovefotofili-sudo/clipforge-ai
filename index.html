@@ -179,7 +179,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.38 · SMART CLIP VARIETY</span>
+    <span class="badge">V2.39 · SMART HIGHLIGHT CATEGORIES</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -239,7 +239,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
             <button type="button" class="secondary" id="endForward">End +0.1s</button>
           </div>
         </div>
-        <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Ranks moments by visual quality, then selects a more varied set across the video. It balances different activity patterns and time ranges; scores are estimates from sampled frames, not story understanding.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div><div class="queuebox"><div class="queuehead"><span>CLIP QUEUE</span><span id="queueCount">0 selected</span></div><div id="queueList" class="queueempty">Add suggested moments to build an export queue.</div><div class="queueactions"><button type="button" class="secondary" id="exportNext" disabled>Export all clips</button><button type="button" class="secondary" id="downloadZip" disabled>↓ Download completed ZIP</button><button type="button" class="secondary" id="clearQueue" disabled>Clear queue</button></div><p class="preview-help">Each clip gets a numbered filename with its time range. Download individual MP4s or package completed clips into one ZIP. ZIP creation needs extra free device memory.</p></div></div>
+        <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Finds different highlight types — action bursts, scene changes, building momentum and sustained activity. Filter the suggestions by category; labels are inferred from sampled visual signals, not story understanding.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div id="categoryFilters" style="display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 4px"></div><div class="momentlist" id="momentList"></div><div class="queuebox"><div class="queuehead"><span>CLIP QUEUE</span><span id="queueCount">0 selected</span></div><div id="queueList" class="queueempty">Add suggested moments to build an export queue.</div><div class="queueactions"><button type="button" class="secondary" id="exportNext" disabled>Export all clips</button><button type="button" class="secondary" id="downloadZip" disabled>↓ Download completed ZIP</button><button type="button" class="secondary" id="clearQueue" disabled>Clear queue</button></div><p class="preview-help">Each clip gets a numbered filename with its time range. Download individual MP4s or package completed clips into one ZIP. ZIP creation needs extra free device memory.</p></div></div>
         <div class="clip-preview-panel">
           <div><div class="smarttitle">▶ CLIP PREVIEW</div><p class="preview-help">Preview your selected start and end times here. Output ratio and framing settings are separate below.</p></div>
           <button type="button" class="secondary previewclipbtn" id="previewClip" disabled>▶ Preview selected clip</button>
@@ -1296,7 +1296,8 @@ async function findBestMoments() {
         const qualityPenalty = (qualityFlags.includes('Mostly inactive footage')?18:0)+(qualityFlags.includes('Very short clip')?12:0)+(qualityFlags.some(flag=>flag.includes('mid-action'))?6:0);
         const rankScore = Math.max(0,Math.min(100,Math.round(visualSignal*0.35+activeRatio*100*0.20+stabilityScore*0.20+durationScore*0.15+Math.max(0,Math.min(100,50+buildUp*50))*0.10-qualityPenalty)));
         const varietyType = buildUp >= 0.22 ? 'Building action' : peakCount >= 3 ? 'Action bursts' : sceneEvents >= 4 ? 'Scene changes' : activeRatio >= 0.48 ? 'Sustained action' : 'Activity highlight';
-        candidates.push({start:clipStart,end:finalEnd,score,rankScore,stabilityScore,durationScore,activitySpread,clipLength,activeRatio,peakCount,burstDensity,relativeLift,buildUp,visualSignal,sceneEvents,varietyType,qualityFlags,suggestedStart,suggestedEnd,refined:true});
+        const highlightCategory = varietyType === 'Building action' ? 'Building momentum' : varietyType === 'Action bursts' ? 'Action / intense' : varietyType === 'Scene changes' ? 'Scene changes' : varietyType === 'Sustained action' ? 'Sustained activity' : 'General highlight';
+        candidates.push({start:clipStart,end:finalEnd,score,rankScore,stabilityScore,durationScore,activitySpread,clipLength,activeRatio,peakCount,burstDensity,relativeLift,buildUp,visualSignal,sceneEvents,varietyType,highlightCategory,qualityFlags,suggestedStart,suggestedEnd,refined:true});
       }
     }
     candidates.sort((a,b)=>b.rankScore-a.rankScore || b.score-a.score);
@@ -1350,12 +1351,20 @@ async function findBestMoments() {
         if (item.sceneEvents >= 4) reasons.push('frequent scene changes');
         return reasons.slice(0,3).join(' · ') || 'best balanced visual score in this scan';
       };
+      const categoryOrder=['Action / intense','Scene changes','Building momentum','Sustained activity','General highlight'];
+      const activeCategories=categoryOrder.filter(category=>chosen.some(item=>item.highlightCategory===category));
+      $('categoryFilters').innerHTML=['All',...activeCategories].map(category=>'<button type="button" class="secondary" data-category-filter="'+category+'" style="padding:7px 11px;font-size:12px">'+category+'</button>').join('');
+      $('categoryFilters').querySelectorAll('[data-category-filter]').forEach(button=>button.addEventListener('click',()=>{
+        const category=button.dataset.categoryFilter;
+        $('momentList').querySelectorAll('[data-highlight-category]').forEach(card=>{card.style.display=category==='All'||card.dataset.highlightCategory===category?'':'none';});
+        $('categoryFilters').querySelectorAll('[data-category-filter]').forEach(item=>{item.style.borderColor=item===button?'#a982ff':'';item.style.background=item===button?'#2a1d45':'';});
+      }));
       $('momentList').innerHTML = chosen.map((m,i)=>{
         const rating = m.varietyScore ?? m.rankScore;
         const signalLabel = m.visualSignal >= 70 ? 'Strong visual signal' : m.visualSignal >= 42 ? 'Mixed visual signal' : 'Limited visual signal';
         const qcText = m.qualityFlags.length ? '⚠ '+m.qualityFlags.join(' · ') : '✓ No obvious quality issues detected';
         const fixButton = m.qualityFlags.some(flag=>flag.includes('mid-action')) ? '<button type="button" class="secondary" data-qcfix="'+i+'">Apply boundary suggestion</button>' : '';
-        return '<div class="moment"><div class="moment-info"><strong>Moment '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(duration,m.end).toFixed(1)+'s</strong><small>Relative rank '+rating+' · Visual signal '+m.visualSignal+'/100 ('+signalLabel.toLowerCase()+') · Stability '+m.stabilityScore+'/100 · Length fit '+m.durationScore+'/100 · '+explainMoment(m)+'</small><small style="display:block;margin-top:4px;color:#cbb8ff">Variety: '+m.varietyType+' · Selection score '+(m.varietyScore??m.rankScore)+'</small><small style="display:block;margin-top:5px;color:'+(m.qualityFlags.length?'#ffd18a':'#79e0b0')+'">'+qcText+'</small></div><div class="moment-actions"><button type="button" class="secondary" data-preview="'+i+'">▶ Preview</button>'+fixButton+'<button type="button" data-queue="'+i+'">＋ Queue</button></div></div>';
+        return '<div class="moment" data-highlight-category="'+m.highlightCategory+'"><div class="moment-info"><strong>Moment '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(duration,m.end).toFixed(1)+'s</strong><small>Relative rank '+rating+' · Visual signal '+m.visualSignal+'/100 ('+signalLabel.toLowerCase()+') · Stability '+m.stabilityScore+'/100 · Length fit '+m.durationScore+'/100 · '+explainMoment(m)+'</small><small style="display:inline-block;margin-top:5px;padding:2px 8px;border:1px solid #5b467e;border-radius:99px;color:#d7c5ff">'+m.highlightCategory+'</small><small style="display:block;margin-top:4px;color:#cbb8ff">Pattern: '+m.varietyType+' · Selection score '+(m.varietyScore??m.rankScore)+'</small><small style="display:block;margin-top:5px;color:'+(m.qualityFlags.length?'#ffd18a':'#79e0b0')+'">'+qcText+'</small></div><div class="moment-actions"><button type="button" class="secondary" data-preview="'+i+'">▶ Preview</button>'+fixButton+'<button type="button" data-queue="'+i+'">＋ Queue</button></div></div>';
       }).join('');
       [...$('momentList').querySelectorAll('[data-preview]')].forEach(button=>button.addEventListener('click',()=>{
         const moment = chosen[Number(button.dataset.preview)];
