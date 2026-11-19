@@ -22,6 +22,21 @@ button:hover,.filebtn:hover{filter:brightness(1.12);transform:translateY(-1px)}b
 .divider{display:flex;align-items:center;gap:10px;color:#777184;font-size:10px;letter-spacing:.14em;margin:15px 0}.divider:before,.divider:after{content:"";height:1px;background:var(--line);flex:1}
 .linkrow{display:flex;gap:8px}.linkrow input{min-width:0;flex:1;background:#0b0a11;border:1px solid #39334b;border-radius:10px;color:white;padding:11px;font:inherit;font-size:13px}.linkhelp{font-size:11px;color:var(--muted);margin:7px 0 0}.ytpreview{width:100%;aspect-ratio:16/9;border:1px solid var(--line);border-radius:13px;margin-top:16px;background:#050508}.linknotice{font-size:11px;color:#d7c9ff;background:#171326;border:1px solid #463565;border-radius:10px;padding:10px;margin-top:10px;line-height:1.55}
 .preview{width:100%;max-height:330px;background:#050508;border-radius:13px;display:block;object-fit:contain;margin-top:16px}
+
+/* V2.19 visual trim timeline */
+.timeline-scrub-wrap{position:relative;height:28px;display:flex;align-items:center;margin:2px 0}
+.timeline-visual-track{position:absolute;left:0;right:0;top:50%;height:8px;transform:translateY(-50%);border-radius:99px;background:#302a3d;overflow:visible;pointer-events:none}
+.timeline-selected{position:absolute;top:0;height:100%;border-radius:99px;background:linear-gradient(90deg,#7c3aed,#c4b5fd);box-shadow:0 0 9px #8b5cf655}
+.timeline-marker{position:absolute;top:-5px;width:2px;height:18px;border-radius:2px;background:#f3e8ff;transform:translateX(-50%);box-shadow:0 0 5px #c4b5fd}
+.timeline-playhead{position:absolute;top:-4px;width:3px;height:16px;background:#fff;border-radius:3px;transform:translateX(-50%);box-shadow:0 0 5px #fff9}
+.timeline-scrub-wrap input{position:relative;z-index:2;background:transparent!important;appearance:none;-webkit-appearance:none;height:28px;outline:none}
+.timeline-scrub-wrap input::-webkit-slider-runnable-track{height:8px;background:transparent}
+.timeline-scrub-wrap input::-moz-range-track{height:8px;background:transparent}
+.timeline-scrub-wrap input::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:#fff;border:3px solid #a78bfa;margin-top:-4.5px;box-shadow:0 1px 5px #0009}
+.timeline-scrub-wrap input::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #a78bfa;box-shadow:0 1px 5px #0009}
+.timeline-legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:10px;margin-top:3px}
+.timeline-legend span{display:inline-flex;align-items:center;gap:5px}.timeline-legend i{display:inline-block;width:12px;height:5px;border-radius:4px;background:#a78bfa}.timeline-legend .boundary{width:2px;height:11px;background:#f3e8ff}
+
 .timeline{margin-top:12px;padding:11px 12px;background:#0b0a11;border:1px solid var(--line);border-radius:12px}.timeline-top{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:11px;margin-bottom:7px}.timeline input{width:100%;accent-color:var(--purple);margin:0;touch-action:pan-y}.timeline-actions{display:flex;justify-content:space-between;gap:8px;margin-top:8px}.timeline-actions button{padding:7px 11px;font-size:11px}.timeline-time{font-variant-numeric:tabular-nums;color:#d9cbff}
 .formatbox{margin-top:14px;padding:13px;border:1px solid #463565;border-radius:12px;background:#171326}
 .formatrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
@@ -189,7 +204,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
         <div class="filemeta" id="filemeta">No video selected yet.</div>
         <video id="source" class="preview" controls playsinline preload="metadata" webkit-playsinline style="display:none"></video>
 <div id="subtitleOverlay" class="subtitle-overlay" aria-live="off"></div>
-        <div class="timeline" id="timeline" style="display:none"><div class="timeline-top"><span>VIDEO TIMELINE</span><span class="timeline-time" id="timelineTime">0:00 / 0:00</span></div><input id="scrubber" type="range" min="0" max="0" step="0.1" value="0" aria-label="Scrub through video"><div class="timeline-actions"><button type="button" class="secondary" id="backFive">↶ 5 sec</button><button type="button" class="secondary" id="forwardFive">5 sec ↷</button></div></div>
+        <div class="timeline" id="timeline" style="display:none"><div class="timeline-top"><span>VIDEO TIMELINE</span><span class="timeline-time" id="timelineTime">0:00 / 0:00</span></div><div class="timeline-scrub-wrap"><div class="timeline-visual-track" aria-hidden="true"><div class="timeline-selected" id="timelineSelected"></div><i class="timeline-marker" id="timelineStartMarker"></i><i class="timeline-marker" id="timelineEndMarker"></i><i class="timeline-playhead" id="timelinePlayhead"></i></div><input id="scrubber" type="range" min="0" max="0" step="0.1" value="0" aria-label="Scrub through video and selected clip"></div><div class="timeline-legend"><span><i></i> Selected clip</span><span><i class="boundary"></i> Trim boundaries</span></div><div class="timeline-actions"><button type="button" class="secondary" id="backFive">↶ 5 sec</button><button type="button" class="secondary" id="forwardFive">5 sec ↷</button></div></div>
         <iframe id="ytPreview" class="ytpreview" title="YouTube video preview" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="display:none"></iframe>
         <div class="filemeta" id="ytInfo" style="display:none;margin-top:8px"></div>
         <div class="empty" id="empty">Your video preview will appear here after upload or YouTube link preview.</div>
@@ -510,9 +525,22 @@ function formatClock(seconds) {
 }
 function updateTimeline() {
   const duration = Number.isFinite(source.duration) ? source.duration : 0;
+  const start = Math.max(0,Math.min(duration,Number($('start')?.value)||0));
+  const end = Math.max(start,Math.min(duration,Number($('end')?.value)||0));
+  const playhead = Math.max(0,Math.min(duration,Number(source.currentTime)||0));
   $('scrubber').max = String(duration);
-  if (!$('scrubber').matches(':active')) $('scrubber').value = String(source.currentTime || 0);
-  $('timelineTime').textContent = formatClock(source.currentTime || 0) + ' / ' + formatClock(duration);
+  if (!$('scrubber').matches(':active')) $('scrubber').value = String(playhead);
+  const pct = v => duration > 0 ? (v/duration*100) : 0;
+  if (duration > 0) {
+    $('timelineSelected').style.left=pct(start)+'%';
+    $('timelineSelected').style.width=Math.max(0,pct(end)-pct(start))+'%';
+    $('timelineStartMarker').style.left=pct(start)+'%';
+    $('timelineEndMarker').style.left=pct(end)+'%';
+    $('timelinePlayhead').style.left=pct(playhead)+'%';
+  } else {
+    $('timelineSelected').style.width='0%';
+  }
+  $('timelineTime').textContent = formatClock(playhead) + ' / ' + formatClock(duration);
   $('timeline').style.display = selectedFile && duration > 0 ? 'block' : 'none';
 }
 $('scrubber').addEventListener('input', () => {
@@ -588,6 +616,7 @@ $('start').addEventListener('input', () => { if (clipPreviewing) stopClipPreview
 $('end').addEventListener('input', () => { if (clipPreviewing) stopClipPreview(); updateButtons(); });
 
 function syncTrimControls(changed) {
+  updateTimeline();
   const duration = Number.isFinite(source.duration) ? source.duration : Math.max(10, Number($('end').value)||10);
   const start = Math.max(0, Math.min(duration, Number($('start').value)||0));
   const end = Math.max(0, Math.min(duration, Number($('end').value)||0));
