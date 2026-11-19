@@ -179,7 +179,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.35 · SMART CLIP INTELLIGENCE</span>
+    <span class="badge">V2.36 · SMART CLIP QUALITY CONTROL</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -239,7 +239,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
             <button type="button" class="secondary" id="endForward">End +0.1s</button>
           </div>
         </div>
-        <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Ranks moments using sustained activity, action bursts, rising activity and scene-change checks. Each result explains its visual signal; this is heuristic analysis, not story or subject recognition.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div><div class="queuebox"><div class="queuehead"><span>CLIP QUEUE</span><span id="queueCount">0 selected</span></div><div id="queueList" class="queueempty">Add suggested moments to build an export queue.</div><div class="queueactions"><button type="button" class="secondary" id="exportNext" disabled>Export all clips</button><button type="button" class="secondary" id="downloadZip" disabled>↓ Download completed ZIP</button><button type="button" class="secondary" id="clearQueue" disabled>Clear queue</button></div><p class="preview-help">Each clip gets a numbered filename with its time range. Download individual MP4s or package completed clips into one ZIP. ZIP creation needs extra free device memory.</p></div></div>
+        <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Ranks moments by visual activity, then checks clip length, inactive footage and boundary activity. Quality warnings are estimates from sampled frames — preview every suggested trim.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div><div class="queuebox"><div class="queuehead"><span>CLIP QUEUE</span><span id="queueCount">0 selected</span></div><div id="queueList" class="queueempty">Add suggested moments to build an export queue.</div><div class="queueactions"><button type="button" class="secondary" id="exportNext" disabled>Export all clips</button><button type="button" class="secondary" id="downloadZip" disabled>↓ Download completed ZIP</button><button type="button" class="secondary" id="clearQueue" disabled>Clear queue</button></div><p class="preview-help">Each clip gets a numbered filename with its time range. Download individual MP4s or package completed clips into one ZIP. ZIP creation needs extra free device memory.</p></div></div>
         <div class="clip-preview-panel">
           <div><div class="smarttitle">▶ CLIP PREVIEW</div><p class="preview-help">Preview your selected start and end times here. Output ratio and framing settings are separate below.</p></div>
           <button type="button" class="secondary previewclipbtn" id="previewClip" disabled>▶ Preview selected clip</button>
@@ -328,7 +328,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
       </section>
     </div>
   </main>
-  <div class="foot">CLIPFORGE AI · V2.35 · SMART CLIP INTELLIGENCE</div>
+  <div class="foot">CLIPFORGE AI · V2.36 · SMART CLIP QUALITY CONTROL</div>
 </div>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -1277,7 +1277,21 @@ async function findBestMoments() {
           clipStart = Math.max(clipStart, proposedStart);
           clipEnd = Math.min(clipEnd, Math.max(clipStart+Math.min(2.5,clipLength*0.55),proposedEnd));
         }
-        candidates.push({start:clipStart,end:Math.max(clipStart+clipLength*0.55,clipEnd),score,clipLength,activeRatio,peakCount,burstDensity,relativeLift,buildUp,visualSignal,sceneEvents,refined:true});
+        const finalEnd = Math.max(clipStart+clipLength*0.55,clipEnd);
+        const actualLength = finalEnd-clipStart;
+        const startIndex = Math.min(samples.length-1,lowerBoundTime(clipStart));
+        const endIndex = Math.max(0,Math.min(samples.length-1,lowerBoundTime(finalEnd)-1));
+        const startSignal = activityValues[startIndex] || 0;
+        const endSignal = activityValues[endIndex] || 0;
+        const qualityFlags = [];
+        if (actualLength < 2.5) qualityFlags.push('Very short clip');
+        if (activeRatio < 0.16) qualityFlags.push('Mostly inactive footage');
+        if (startSignal > Math.max(2.2,avgActivity*1.55)) qualityFlags.push('May start mid-action');
+        if (endSignal > Math.max(2.2,avgActivity*1.55)) qualityFlags.push('May end mid-action');
+        const trimStep = Math.max(0.5,step*0.8);
+        const suggestedStart = qualityFlags.includes('May start mid-action') ? Math.max(0,clipStart-trimStep) : clipStart;
+        const suggestedEnd = qualityFlags.includes('May end mid-action') ? Math.min(duration,finalEnd+trimStep) : finalEnd;
+        candidates.push({start:clipStart,end:finalEnd,score,clipLength,activeRatio,peakCount,burstDensity,relativeLift,buildUp,visualSignal,sceneEvents,qualityFlags,suggestedStart,suggestedEnd,refined:true});
       }
     }
     candidates.sort((a,b)=>b.score-a.score);
@@ -1304,7 +1318,7 @@ async function findBestMoments() {
     if (!chosen.length || chosen[0].score < 2.2) {
       $('smartStatus').textContent = 'No strong visual activity was detected. Try another video or set the trim points manually.';
     } else {
-      $('smartStatus').textContent = 'Done. Ranked by sustained action, bursts and rising activity. Near-duplicates were filtered. Signal scores describe visible motion patterns only — not story understanding.';
+      $('smartStatus').textContent = 'Done. Ranked by visual activity and checked clip quality. Warnings are estimates from sampled frames, not guarantees — preview before exporting.';
       const topScore = Math.max(0.01, ...chosen.map(item => item.score));
       const explainMoment = item => {
         const reasons = [];
@@ -1318,7 +1332,9 @@ async function findBestMoments() {
       $('momentList').innerHTML = chosen.map((m,i)=>{
         const rating = Math.max(1, Math.min(99, Math.round(m.score / topScore * 100)));
         const signalLabel = m.visualSignal >= 70 ? 'Strong visual signal' : m.visualSignal >= 42 ? 'Mixed visual signal' : 'Limited visual signal';
-        return '<div class="moment"><div class="moment-info"><strong>Moment '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(duration,m.end).toFixed(1)+'s</strong><small>Relative rank '+rating+' · Visual signal '+m.visualSignal+'/100 ('+signalLabel.toLowerCase()+') · '+explainMoment(m)+'</small></div><div class="moment-actions"><button type="button" class="secondary" data-preview="'+i+'">▶ Preview</button><button type="button" data-queue="'+i+'">＋ Queue</button></div></div>';
+        const qcText = m.qualityFlags.length ? '⚠ '+m.qualityFlags.join(' · ') : '✓ No obvious quality issues detected';
+        const fixButton = m.qualityFlags.some(flag=>flag.includes('mid-action')) ? '<button type="button" class="secondary" data-qcfix="'+i+'">Apply boundary suggestion</button>' : '';
+        return '<div class="moment"><div class="moment-info"><strong>Moment '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(duration,m.end).toFixed(1)+'s</strong><small>Relative rank '+rating+' · Visual signal '+m.visualSignal+'/100 ('+signalLabel.toLowerCase()+') · '+explainMoment(m)+'</small><small style="display:block;margin-top:5px;color:'+(m.qualityFlags.length?'#ffd18a':'#79e0b0')+'">'+qcText+'</small></div><div class="moment-actions"><button type="button" class="secondary" data-preview="'+i+'">▶ Preview</button>'+fixButton+'<button type="button" data-queue="'+i+'">＋ Queue</button></div></div>';
       }).join('');
       [...$('momentList').querySelectorAll('[data-preview]')].forEach(button=>button.addEventListener('click',()=>{
         const moment = chosen[Number(button.dataset.preview)];
@@ -1326,6 +1342,12 @@ async function findBestMoments() {
         $('previewClip').click();
       }));
       [...$('momentList').querySelectorAll('[data-queue]')].forEach(button=>button.addEventListener('click',()=>addMomentToQueue(chosen[Number(button.dataset.queue)])));
+      [...$('momentList').querySelectorAll('[data-qcfix]')].forEach(button=>button.addEventListener('click',()=>{
+        const moment=chosen[Number(button.dataset.qcfix)];
+        if(!moment)return;
+        applyMoment({...moment,start:moment.suggestedStart,end:moment.suggestedEnd});
+        $('smartStatus').textContent='Boundary suggestion applied. Preview the clip before exporting — the adjustment is only an estimate.';
+      }));
     }
   } catch(err) {
     $('smartStatus').textContent='Scan could not finish: '+(err?.message||String(err));
