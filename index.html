@@ -342,6 +342,7 @@ let momentQueue = [];
 let activeQueueId = null;
 let queueCounter = 0;
 let queueAutoRun = false;
+let queueContinuePending = false;
 let ffmpegProgressLabel = 'Rendering clip';
 
 async function fetchFile(file) {
@@ -1382,8 +1383,6 @@ function addMomentToQueue(moment) {
 $('clearQueue').addEventListener('click',()=>{if(busy)return;momentQueue.forEach(item=>{if(item.downloadURL)URL.revokeObjectURL(item.downloadURL);});momentQueue=[];activeQueueId=null;queueAutoRun=false;renderMomentQueue();});
 $('exportNext').addEventListener('click',()=>{
   if (busy || !fileBytesReady || !momentQueue.some(item=>item.status==='pending' || item.status==='failed')) return;
-  const failed=momentQueue.find(item=>item.status==='failed');
-  if(failed){queueAutoRun=false;startQueuedExport(failed);return;}
   queueAutoRun=true;
   startNextQueuedExport();
 });
@@ -1772,7 +1771,7 @@ $('export').addEventListener('click', async () => {
       const finished=momentQueue.find(item=>item.id===activeQueueId);
       if(finished){finished.status='completed';finished.downloadURL=URL.createObjectURL(outputBlob);}
       activeQueueId=null;renderMomentQueue();
-      if(queueAutoRun){$('smartStatus').textContent='Clip complete. Preparing the next queued export…';setTimeout(startNextQueuedExport,180);}
+      if(queueAutoRun){queueContinuePending=true;$('smartStatus').textContent='Clip complete. Preparing the next queued export…';}
       else $('smartStatus').textContent='Clip exported. Its MP4 is saved in the queue row; retry any failed clips there.';
     }
     try { await ffmpeg.deleteFile(inputName); await ffmpeg.deleteFile(outputName); await ffmpeg.deleteFile('clipforge-font.ttf'); for (const name of subtitleFiles) await ffmpeg.deleteFile(name); if (musicTempName) await ffmpeg.deleteFile(musicTempName); } catch {}
@@ -1785,6 +1784,7 @@ $('export').addEventListener('click', async () => {
     setStatus(`Export failed: ${message}. Your current edits are still available; check the error and retry without reloading if possible.`, 'bad');
   } finally {
     busy = false; updateButtons();
+    if(queueAutoRun && queueContinuePending){queueContinuePending=false;setTimeout(startNextQueuedExport,180);}
   }
 });
 
