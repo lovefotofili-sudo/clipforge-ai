@@ -170,13 +170,16 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
 
+
+/* V2.24 multi-track editing workspace */
+.multitrack{margin-top:16px;padding:14px;border:1px solid #463565;border-radius:14px;background:linear-gradient(160deg,#171326,#0e0c15)}.mt-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.mt-title{font-size:13px;font-weight:900;letter-spacing:.06em;color:#e7dcff}.mt-sub{font-size:10px;color:var(--muted);line-height:1.5;margin:5px 0 12px}.mt-controls{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:9px;margin:10px 0}.mt-control{min-width:0;padding:10px;background:#0b0a11;border:1px solid #39334b;border-radius:9px}.mt-control label{display:block;color:#aaa2b9;font-size:10px;margin-bottom:6px}.mt-control input{width:100%;min-width:0}.mt-control input[type=number]{background:#171326;border:1px solid #39334b;border-radius:7px;color:#fff;padding:8px;font:inherit;font-size:12px}.mt-control input[type=range],.mt-check input{accent-color:#a78bfa}.mt-check{display:flex;align-items:center;gap:7px;color:#d8c8ff;font-size:11px;margin-top:9px}.mt-lanes{display:grid;gap:8px;margin-top:12px}.mt-lane{display:grid;grid-template-columns:94px minmax(0,1fr);gap:8px;align-items:stretch}.mt-label{display:flex;align-items:center;color:#aaa2b9;font-size:10px;font-weight:800;letter-spacing:.04em}.mt-track{position:relative;min-height:35px;overflow:hidden;border:1px solid #39334b;border-radius:8px;background:repeating-linear-gradient(90deg,#11101a 0,#11101a calc(10% - 1px),#252033 calc(10% - 1px),#252033 10%)}.mt-clip{position:absolute;top:5px;bottom:5px;left:0;width:100%;border-radius:5px;min-width:3px;background:linear-gradient(90deg,#6d4cb4,#a78bfa);border:1px solid #c4a7ff88}.mt-clip.audio{background:linear-gradient(90deg,#176b67,#39c6a5);border-color:#64e5c5aa}.mt-clip.music{background:linear-gradient(90deg,#8b5a20,#f0b65c);border-color:#ffd18aaa}.mt-clip.caption{background:linear-gradient(90deg,#3e579c,#7da5ff);border-color:#9ebaffaa}.mt-empty{position:absolute;inset:0;display:flex;align-items:center;padding:0 9px;color:#6f687e;font-size:10px}.mt-clip-label{position:absolute;inset:0;display:flex;align-items:center;padding:0 7px;color:#fff;font-size:9px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mt-foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;color:#827b91;font-size:10px;margin-top:9px}.mt-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.mt-actions button{flex:1;min-width:125px}.mt-hidden{display:none!important}@media(max-width:520px){.mt-controls{grid-template-columns:1fr 1fr}.mt-control:first-child{grid-column:1/-1}.mt-lane{grid-template-columns:72px minmax(0,1fr);gap:6px}.mt-label{font-size:9px}.multitrack{padding:11px}.mt-actions button{min-width:100%}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.13 · QUICK MOBILE SCAN</span>
+    <span class="badge">V2.24 · MULTI-TRACK EDITOR</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -286,6 +289,27 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
           <p class="subtitle-help">Automatic transcription runs locally in this browser using Whisper Tiny English. First use downloads a speech model (about 75 MB); processing can be slow or memory-limited on phones. English model only in this release.</p>
         </div>
 
+
+        <section class="multitrack" id="multiTrackEditor" aria-label="Multi-track editor">
+          <div class="mt-head"><div class="mt-title">▤ MULTI-TRACK EDITOR</div><span class="badge">V2.24</span></div>
+          <p class="mt-sub">Arrange video, original sound, background music and captions on separate lanes. Music is mixed into exported MP4s.</p>
+          <div class="mt-lanes">
+            <div class="mt-lane"><div class="mt-label">VIDEO</div><div class="mt-track"><div class="mt-clip" id="mtVideoClip"><span class="mt-clip-label" id="mtVideoLabel">Select a video to build your timeline</span></div></div></div>
+            <div class="mt-lane"><div class="mt-label">ORIGINAL AUDIO</div><div class="mt-track"><div class="mt-clip audio" id="mtOriginalClip"><span class="mt-clip-label" id="mtOriginalLabel">Video sound</span></div></div></div>
+            <div class="mt-lane"><div class="mt-label">MUSIC</div><div class="mt-track"><div class="mt-empty" id="mtMusicEmpty">Add a music file to this track</div><div class="mt-clip music mt-hidden" id="mtMusicClip"><span class="mt-clip-label" id="mtMusicLabel"></span></div></div></div>
+            <div class="mt-lane"><div class="mt-label">SUBTITLES</div><div class="mt-track" id="mtCaptionTrack"><div class="mt-empty" id="mtCaptionEmpty">Caption segments appear here</div></div></div>
+          </div>
+          <div class="mt-actions"><button type="button" class="secondary" id="chooseMusic">＋ Add music / audio</button><button type="button" class="secondary" id="removeMusic" disabled>Remove music</button></div>
+          <input id="musicFile" type="file" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg,.flac" hidden>
+          <div class="mt-controls">
+            <div class="mt-control"><label for="musicStart">Music starts at (video seconds)</label><input id="musicStart" type="number" min="0" step="0.1" value="0" inputmode="decimal" disabled></div>
+            <div class="mt-control"><label for="musicVolume">Music volume · <output id="musicVolumeValue">35%</output></label><input id="musicVolume" type="range" min="0" max="100" value="35" disabled></div>
+            <div class="mt-control"><label for="originalVolume">Original sound · <output id="originalVolumeValue">100%</output></label><input id="originalVolume" type="range" min="0" max="100" value="100"></div>
+          </div>
+          <label class="mt-check"><input id="muteOriginal" type="checkbox"> Mute original video audio</label>
+          <div class="mt-foot"><span id="mtMusicName">No music selected</span><span id="mtDuration">Timeline waiting for video</span></div>
+        </section>
+
         <div class="actions">
           <button class="secondary" id="setStart" disabled>Set start to preview</button>
           <button class="secondary" id="setEnd" disabled>Set end to preview</button>
@@ -299,11 +323,13 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
       </section>
     </div>
   </main>
-  <div class="foot">CLIPFORGE AI · V2.16 · HIGHLIGHT ACCURACY BOOST</div>
+  <div class="foot">CLIPFORGE AI · V2.24 · MULTI-TRACK EDITOR</div>
 </div>
 <script type="module">
 const $ = id => document.getElementById(id);
 const source = $('source');
+const musicAudio = new Audio(); musicAudio.preload = 'metadata';
+let musicFile = null, musicURL = null;
 let ffmpeg = null;
 let engineReady = false;
 let busy = false;
@@ -489,6 +515,7 @@ function useFile(file) {
   $('duration').textContent = 'Reading video metadata…';
   $('start').value = '0';
   $('end').value = '10';
+  renderMultiTrackTimeline();
   setStatus('File selected. Waiting for Chrome to read the video…');
   source.load();
   metadataTimer = setTimeout(() => {
@@ -1325,6 +1352,7 @@ function updateSubtitleState() {
   $('downloadSrt').disabled = valid.length === 0;
   $('clearSubtitles').disabled = subtitleItems.length === 0;
   updateSubtitleOverlay();
+  if (typeof renderMultiTrackTimeline === 'function') renderMultiTrackTimeline();
 }
 function updateSubtitleOverlay() {
   const overlay = $('subtitleOverlay');
@@ -1473,6 +1501,7 @@ $('export').addEventListener('click', async () => {
   const fileSnapshot = selectedFile;
   const startSnapshot = timeValue($('start').value);
   const endSnapshot = timeValue($('end').value);
+  const musicSnapshot=musicFile, musicStartSnapshot=Math.max(0,Number($('musicStart').value)||0), musicVolumeSnapshot=Math.max(0,Math.min(1,Number($('musicVolume').value)/100)), muteOriginalSnapshot=$('muteOriginal').checked;
   const exportCaptions = validSubtitleItems().filter(item => Number(item.end) > startSnapshot && Number(item.start) < endSnapshot).map(item => ({text:item.text.trim(),animation:$('subtitleAnimation').value,start:Math.max(0,Number(item.start)-startSnapshot),end:Math.min(endSnapshot,Number(item.end))-startSnapshot})).filter(item => item.text && item.end > item.start);
   let dimensions;
   try { dimensions = getOutputDimensions(); }
@@ -1525,7 +1554,7 @@ $('export').addEventListener('click', async () => {
     const requestedRender = dimensions ? getRenderDimensions(dimensions) : null;
     const sourceFitsRequested = requestedRender && source.videoWidth <= requestedRender.width && source.videoHeight <= requestedRender.height;
     // Stream-copy only when no crop, resize or caption burn-in is required.
-    const needsTransform = exportCaptions.length > 0 || Boolean(dimensions && (
+    const needsTransform = Boolean(musicSnapshot || muteOriginalSnapshot || Number($('originalVolume').value)<100) || exportCaptions.length > 0 || Boolean(dimensions && (
       Math.abs(sourceRatio - targetRatio) > 0.012 || !sourceFitsRequested
     ));
     if (needsTransform) {
@@ -1550,13 +1579,24 @@ $('export').addEventListener('click', async () => {
         setStatus('Burning ' + exportCaptions.length + ' subtitle segment(s) into the MP4 at original size…');
       }
       if (exportFilter) filter = filter ? filter + ',' + exportFilter : exportFilter;
-      exitCode = await ffmpeg.exec([
-        '-ss', String(start), '-i', inputName, '-t', String(length),
-        '-map', '0:v:0', '-map', '0:a?', '-vf', filter,
-        '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23',
-        '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '128k',
-        '-movflags', '+faststart', '-sn', '-dn', outputName
-      ]);
+
+      const audioArgs=[];let audioMap=['-map','0:a?'];
+      if(musicSnapshot){
+        const musicExt=(musicSnapshot.name.split('.').pop()||'mp3').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp3',musicName='clipforge-music.'+musicExt;
+        await ffmpeg.writeFile(musicName,new Uint8Array(await musicSnapshot.arrayBuffer()));audioArgs.push('-i',musicName);
+        const delay=Math.max(0,musicStartSnapshot-start),trim=Math.max(0,start-musicStartSnapshot),musicDuration=Math.max(.05,length-delay);
+        const chain='[1:a]atrim=start='+trim.toFixed(3)+':duration='+musicDuration.toFixed(3)+',asetpts=PTS-STARTPTS,volume='+musicVolumeSnapshot.toFixed(2)+',adelay='+Math.round(delay*1000)+'|'+Math.round(delay*1000)+'[music]';
+        const graph=muteOriginalSnapshot?chain+';[music]anull[aout]':'[0:a]atrim=duration='+length.toFixed(3)+',asetpts=PTS-STARTPTS,volume='+(Number($('originalVolume').value)/100).toFixed(2)+'[original];'+chain+';[original][music]amix=inputs=2:duration=first:dropout_transition=0[aout]';
+        audioArgs.push('-filter_complex',graph);audioMap=['-map','[aout]'];
+      }else if(muteOriginalSnapshot)audioMap=['-an'];
+      else if(Number($('originalVolume').value)<100)audioArgs.push('-af','volume='+(Number($('originalVolume').value)/100).toFixed(2));
+      exitCode=await ffmpeg.exec(['-ss',String(start),'-i',inputName,...audioArgs,'-t',String(length),'-map','0:v:0',...audioMap,'-vf',filter,'-c:v','libx264','-preset','ultrafast','-crf','23','-pix_fmt','yuv420p',...(musicSnapshot||!muteOriginalSnapshot?['-c:a','aac','-b:a','128k']:[]),'-movflags','+faststart','-sn','-dn',outputName]);
+      if(exitCode!==0&&musicSnapshot&&!muteOriginalSnapshot){
+        try{await ffmpeg.deleteFile(outputName);}catch{}
+        const delay=Math.max(0,musicStartSnapshot-start),trim=Math.max(0,start-musicStartSnapshot),musicDuration=Math.max(.05,length-delay),musicExt=(musicSnapshot.name.split('.').pop()||'mp3').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp3';
+        const graph='[1:a]atrim=start='+trim.toFixed(3)+':duration='+musicDuration.toFixed(3)+',asetpts=PTS-STARTPTS,volume='+musicVolumeSnapshot.toFixed(2)+',adelay='+Math.round(delay*1000)+'|'+Math.round(delay*1000)+'[aout]';
+        exitCode=await ffmpeg.exec(['-ss',String(start),'-i',inputName,'-i','clipforge-music.'+musicExt,'-t',String(length),'-filter_complex',graph,'-map','0:v:0','-map','[aout]','-vf',filter,'-c:v','libx264','-preset','ultrafast','-crf','23','-pix_fmt','yuv420p','-c:a','aac','-b:a','128k','-movflags','+faststart','-sn','-dn',outputName]);
+      }
     } else {
       ffmpegProgressLabel = 'Copying your clip';
       $('exportStage').textContent = 'Step 3 of 4 · Copying video without re-encoding';
@@ -1610,8 +1650,60 @@ $('export').addEventListener('click', async () => {
   }
 });
 
+
+function renderMultiTrackTimeline() {
+  const duration = Number.isFinite(source.duration) && source.duration > 0 ? source.duration : 0;
+  const start = Math.max(0, Number($('start')?.value) || 0), end = Math.max(start, Number($('end')?.value) || 0);
+  const pct = value => duration ? Math.max(0,Math.min(100,value/duration*100)) : 0;
+  if (!duration) { $('mtDuration').textContent='Timeline waiting for video'; }
+  else {
+    $('mtVideoClip').style.left=pct(start)+'%'; $('mtVideoClip').style.width=Math.max(0,pct(end)-pct(start))+'%';
+    $('mtVideoLabel').textContent='Selected video · '+Math.max(0,end-start).toFixed(1)+'s';
+    $('mtOriginalClip').style.left=pct(start)+'%'; $('mtOriginalClip').style.width=Math.max(0,pct(end)-pct(start))+'%';
+    $('mtDuration').textContent='Full timeline · '+duration.toFixed(1)+'s';
+  }
+  const musicStart=Math.max(0,Number($('musicStart').value)||0);
+  if(musicFile && duration){$('mtMusicClip').classList.remove('mt-hidden');$('mtMusicEmpty').classList.add('mt-hidden');$('mtMusicClip').style.left=pct(musicStart)+'%';$('mtMusicClip').style.width=Math.max(0,100-pct(musicStart))+'%';$('mtMusicLabel').textContent=musicFile.name;}
+  else{$('mtMusicClip').classList.add('mt-hidden');$('mtMusicEmpty').classList.remove('mt-hidden');}
+  const track=$('mtCaptionTrack');track.querySelectorAll('.mt-caption-segment').forEach(n=>n.remove());
+  const captions=validSubtitleItems();$('mtCaptionEmpty').classList.toggle('mt-hidden',captions.length>0);
+  captions.forEach(item=>{const el=document.createElement('div');el.className='mt-clip caption mt-caption-segment';el.style.left=pct(Number(item.start))+'%';el.style.width=Math.max(1.2,pct(Number(item.end))-pct(Number(item.start)))+'%';const label=document.createElement('span');label.className='mt-clip-label';label.textContent=item.text||'Caption';el.appendChild(label);track.appendChild(el);});
+  $('mtOriginalLabel').textContent=$('muteOriginal').checked?'Muted':'Original video sound';
+}
+function syncMusicPreview(forceSeek=false){
+  if(!musicFile||source.paused){musicAudio.pause();return;}
+  const start=Math.max(0,Number($('musicStart').value)||0),now=Number(source.currentTime)||0;
+  if(now<start||now>=start+(Number(musicAudio.duration)||Infinity)){musicAudio.pause();return;}
+  const target=Math.max(0,now-start);
+  if(forceSeek||Math.abs((musicAudio.currentTime||0)-target)>.45){try{musicAudio.currentTime=target;}catch{}}
+  musicAudio.volume=Math.max(0,Math.min(1,Number($('musicVolume').value)/100));
+  if(musicAudio.paused)musicAudio.play().catch(()=>{});
+}
+$('chooseMusic').addEventListener('click',()=>$('musicFile').click());
+$('musicFile').addEventListener('change',()=>{
+  const file=$('musicFile').files?.[0];if(!file)return;
+  if(!file.type.startsWith('audio/')&&!/\.(mp3|m4a|wav|aac|ogg|flac)$/i.test(file.name)){setStatus('Choose a supported audio file such as MP3, M4A or WAV.','bad');return;}
+  if(musicURL)URL.revokeObjectURL(musicURL);
+  musicFile=file;musicURL=URL.createObjectURL(file);musicAudio.src=musicURL;musicAudio.load();
+  $('musicStart').disabled=false;$('musicVolume').disabled=false;$('removeMusic').disabled=false;
+  $('mtMusicName').textContent=file.name+' · '+formatBytes(file.size);renderMultiTrackTimeline();syncMusicPreview(true);
+  setStatus('Music added to its own track. Adjust its start and volume, then export.','good');
+});
+$('removeMusic').addEventListener('click',()=>{
+  musicAudio.pause();musicAudio.removeAttribute('src');musicAudio.load();if(musicURL)URL.revokeObjectURL(musicURL);
+  musicURL=null;musicFile=null;$('musicFile').value='';$('musicStart').disabled=true;$('musicVolume').disabled=true;$('removeMusic').disabled=true;
+  $('mtMusicName').textContent='No music selected';renderMultiTrackTimeline();
+});
+$('musicStart').addEventListener('input',()=>{renderMultiTrackTimeline();syncMusicPreview(true);});
+$('musicVolume').addEventListener('input',()=>{musicAudio.volume=Number($('musicVolume').value)/100;$('musicVolumeValue').textContent=$('musicVolume').value+'%';});
+$('originalVolume').addEventListener('input',()=>{source.volume=Number($('originalVolume').value)/100;$('originalVolumeValue').textContent=$('originalVolume').value+'%';});
+$('muteOriginal').addEventListener('change',()=>{source.muted=$('muteOriginal').checked;renderMultiTrackTimeline();});
+source.addEventListener('play',()=>syncMusicPreview(true));source.addEventListener('pause',()=>musicAudio.pause());source.addEventListener('seeking',()=>syncMusicPreview(true));source.addEventListener('timeupdate',()=>syncMusicPreview());source.addEventListener('ended',()=>musicAudio.pause());source.addEventListener('loadedmetadata',renderMultiTrackTimeline);
+$('start').addEventListener('input',renderMultiTrackTimeline);$('end').addEventListener('input',renderMultiTrackTimeline);renderMultiTrackTimeline();
+
 window.addEventListener('beforeunload', () => {
   if (sourceURL) URL.revokeObjectURL(sourceURL);
+  if (musicURL) URL.revokeObjectURL(musicURL);
   if (outputURL) URL.revokeObjectURL(outputURL);
 });
 
