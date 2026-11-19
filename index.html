@@ -147,7 +147,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.11 · FASTER MOBILE LOADING</span>
+    <span class="badge">V2.12 · RELIABLE MOBILE SCANNING</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -783,54 +783,59 @@ async function loadEngine() {
 }
 
 let momentScanBusy = false;
-function seekForScan(time) {
+function waitForDecodedScanFrame(target, timeoutMs=14000) {
   return new Promise((resolve, reject) => {
-    const target = Math.max(0, Math.min(Math.max(0, source.duration - 0.05), time));
-    // Android browsers can report a seek as complete slightly before the
-    // decoded frame is ready. Allow a wider timestamp tolerance, but still
-    // require decoded data before drawing to the analysis canvas.
-    const closeEnough = () => Math.abs(source.currentTime - target) < 0.35 && !source.seeking;
-    if (closeEnough() && source.readyState >= 2) { resolve(); return; }
-    let settled = false, nudged = false, timer = null, poll = null;
-    const cleanup = () => {
-      if (timer !== null) clearTimeout(timer);
-      if (poll !== null) clearInterval(poll);
-      source.removeEventListener('seeked', done);
-      source.removeEventListener('timeupdate', done);
-      source.removeEventListener('loadeddata', done);
-      source.removeEventListener('canplay', done);
-      source.removeEventListener('error', onError);
+    let settled=false, timer=null, poll=null, frameHandle=null;
+    const closeEnough=()=>Math.abs(source.currentTime-target)<0.4 && !source.seeking && source.readyState>=2;
+    const cleanup=()=>{
+      if(timer!==null) clearTimeout(timer);
+      if(poll!==null) clearInterval(poll);
+      source.removeEventListener('seeked',check);
+      source.removeEventListener('loadeddata',check);
+      source.removeEventListener('canplay',check);
+      source.removeEventListener('error',onError);
+      if(frameHandle!==null && source.cancelVideoFrameCallback) {
+        try{source.cancelVideoFrameCallback(frameHandle)}catch{}
+      }
     };
-    const finish = () => { if (settled) return; settled = true; cleanup(); resolve(); };
-    const fail = error => { if (settled) return; settled = true; cleanup(); reject(error); };
-    const done = () => { if (closeEnough() && source.readyState >= 2) finish(); };
-    const onError = () => fail(new Error('The browser could not decode this video frame.'));
-    const armTimeout = ms => {
-      if (timer !== null) clearTimeout(timer);
-      timer = setTimeout(() => {
-        if (closeEnough() && source.readyState >= 2) return finish();
-        // A few mobile decoders occasionally drop the first seek event.
-        // Re-issue the same seek once instead of immediately aborting the scan.
-        if (!nudged) {
-          nudged = true;
-          try { source.currentTime = target; armTimeout(10000); }
-          catch (error) { fail(error); }
-          return;
-        }
-        fail(new Error('This video frame is still loading after a retry. Try scanning again after the video has played for a few seconds.'));
-      }, ms);
+    const finish=()=>{if(settled)return;settled=true;cleanup();resolve()};
+    const fail=err=>{if(settled)return;settled=true;cleanup();reject(err)};
+    const onError=()=>fail(new Error('The browser could not decode this video frame.'));
+    const check=()=>{
+      if(!closeEnough()) return;
+      // requestVideoFrameCallback confirms that the decoder has actually
+      // presented a frame, not merely that the seek event fired.
+      if(source.requestVideoFrameCallback){
+        if(frameHandle!==null)return;
+        frameHandle=source.requestVideoFrameCallback(()=>finish());
+      } else finish();
     };
-    source.addEventListener('seeked', done);
-    source.addEventListener('timeupdate', done);
-    source.addEventListener('loadeddata', done);
-    source.addEventListener('canplay', done);
-    source.addEventListener('error', onError, {once:true});
-    try {
-      source.currentTime = target;
-      poll = setInterval(done, 100);
-      armTimeout(9000);
-    } catch (error) { fail(error); }
+    source.addEventListener('seeked',check);
+    source.addEventListener('loadeddata',check);
+    source.addEventListener('canplay',check);
+    source.addEventListener('error',onError,{once:true});
+    poll=setInterval(check,120);
+    timer=setTimeout(()=>fail(new Error('Your phone is taking too long to decode this frame. Try a shorter video or let the preview play briefly, then scan again.')),timeoutMs);
+    check();
   });
+}
+async function seekForScan(time) {
+  const target=Math.max(0,Math.min(Math.max(0,source.duration-0.05),time));
+  if(Math.abs(source.currentTime-target)<0.4 && !source.seeking && source.readyState>=2) {
+    if(!source.requestVideoFrameCallback)return;
+    await new Promise(resolve=>source.requestVideoFrameCallback(()=>resolve()));
+    return;
+  }
+  // A small offset on retry helps mobile decoders recover from a stalled seek.
+  for(let attempt=0;attempt<2;attempt++){
+    try{
+      source.currentTime=target+(attempt?0.015:0);
+      await waitForDecodedScanFrame(target+(attempt?0.015:0),attempt?18000:14000);
+      return;
+    }catch(error){
+      if(attempt===1)throw error;
+    }
+  }
 }
 async function findBestMoments() {
   if (!selectedFile || !Number.isFinite(source.duration) || momentScanBusy) return;
