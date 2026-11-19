@@ -73,7 +73,7 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.8.0 · SMART HIGHLIGHT FINDER</span>
+    <span class="badge">V2.8.1 · SMART HIGHLIGHT FINDER</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -175,12 +175,12 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
         <div class="status" id="status" role="status" aria-live="polite">Choose a video to begin.</div>
         <progress id="progress" max="1" value="0"></progress>
         <div class="actions"><button class="primary" id="export" disabled>Fast export MP4 ↗</button></div>
-        <a id="download" class="filebtn" style="display:none;text-decoration:none;margin-top:12px" download="clipforge-clip.mp4">↓ Download MP4</a>
+        <button type="button" id="saveToPhotos" class="filebtn" style="display:none;margin-top:12px;width:100%">▣ Save to Gallery / Photos</button><a id="download" class="filebtn" style="display:none;text-decoration:none;margin-top:10px" download="clipforge-clip.mp4">↓ Download MP4</a><p id="shareHelp" class="note" style="display:none">Choose Photos or Gallery in your phone’s share menu if it is available. If it is not listed, use Download MP4.</p>
         <p class="note">The first export must download the video engine. Later visits may reuse cached files. Fast export avoids re-encoding when possible; some files may need a slower compatibility conversion. Keep this tab open.</p>
       </section>
     </div>
   </main>
-  <div class="foot">CLIPFORGE AI · V2.8.0 · SMART MOMENT FINDER</div>
+  <div class="foot">CLIPFORGE AI · V2.8.1 · SMART MOMENT FINDER</div>
 </div>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -216,7 +216,7 @@ async function toBlobURL(url, mimeType, label, onProgress) {
   }
   return URL.createObjectURL(new Blob(chunks, {type:mimeType}));
 }
-let selectedFile = null, selectedFileBytes = null, fileBytesReady = false, sourceURL = null, outputURL = null;
+let selectedFile = null, selectedFileBytes = null, fileBytesReady = false, sourceURL = null, outputURL = null, outputBlob = null;
 let metadataTimer = null, fileReaderFallbackTried = false, loadAttempt = 0;
 
 function setStatus(message, kind='') {
@@ -325,7 +325,7 @@ function useFile(file) {
   if (sourceURL) { URL.revokeObjectURL(sourceURL); sourceURL = null; }
   if (outputURL) { URL.revokeObjectURL(outputURL); outputURL = null; }
   $('momentList').innerHTML = ''; momentQueue = []; renderMomentQueue(); $('smartStatus').textContent = 'Ready to scan this video.';
-  $('download').style.display = 'none';
+  $('download').style.display = 'none'; $('saveToPhotos').style.display='none'; $('shareHelp').style.display='none'; outputBlob=null;
   source.pause();
   source.removeAttribute('src');
   source.load();
@@ -1191,6 +1191,27 @@ window.addEventListener('scroll', updateSubtitleOverlay, {passive:true});
 renderSubtitleRows();
 
 
+$('saveToPhotos').addEventListener('click', async () => {
+  if (!outputBlob) { setStatus('Export a video first, then try Save to Gallery / Photos.', 'bad'); return; }
+  const file = new File([outputBlob], $('download').download || 'clipforge-video.mp4', {type:'video/mp4',lastModified:Date.now()});
+  try {
+    if (navigator.share && navigator.canShare && navigator.canShare({files:[file]})) {
+      await navigator.share({files:[file],title:'CLIPFORGE AI video',text:'Save this exported video to your Photos or Gallery.'});
+      setStatus('Share menu opened. Choose Photos or Gallery if your phone offers it.', 'good');
+    } else {
+      setStatus('Direct photo sharing is not supported by this browser. Use Download MP4 below, then save it to Gallery or Photos.', 'ok');
+      $('download').click();
+    }
+  } catch (error) {
+    if (error && error.name === 'AbortError') {
+      setStatus('Share menu closed. Your MP4 is still ready to download.', 'ok');
+    } else {
+      console.error('[CLIPFORGE share error]', error);
+      setStatus('Could not open the phone share menu. Use Download MP4 instead.', 'bad');
+    }
+  }
+});
+
 $('export').addEventListener('click', async () => {
   if (busy || !validateTimes()) return;
   const fileSnapshot = selectedFile;
@@ -1287,10 +1308,13 @@ $('export').addEventListener('click', async () => {
     if (exitCode !== 0) throw new Error('Export failed. Try a shorter video or choose Original video format.');
     const data = await ffmpeg.readFile(outputName);
     if (outputURL) URL.revokeObjectURL(outputURL);
-    outputURL = URL.createObjectURL(new Blob([data], {type:'video/mp4'}));
+    outputBlob = new Blob([data], {type:'video/mp4'});
+    outputURL = URL.createObjectURL(outputBlob);
     $('download').href = outputURL;
     $('download').style.display = 'inline-flex';
     $('download').download = `clipforge-${Date.now()}.mp4`;
+    $('saveToPhotos').style.display = 'block';
+    $('shareHelp').style.display = 'block';
     setStatus(`Finished! Your MP4 is ready (${formatBytes(data.length)}).`, 'good');
     if (activeQueueId !== null && momentQueue[0]?.id === activeQueueId) {
       momentQueue.shift(); activeQueueId=null; renderMomentQueue();
