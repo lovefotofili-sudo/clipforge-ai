@@ -12,7 +12,7 @@
 .brand{display:flex;align-items:center;gap:11px;font-weight:850;letter-spacing:.09em}.logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(140deg,#b78bff,#6833d6);display:grid;place-items:center;box-shadow:0 8px 28px #8a51ff45;font-size:19px}
 .badge{font-size:11px;color:#cbb8ff;border:1px solid #553c82;border-radius:99px;padding:5px 9px;letter-spacing:.08em}
 h1{font-size:clamp(28px,5vw,44px);line-height:1.08;letter-spacing:-.04em;margin:0 0 10px}.grad{background:linear-gradient(90deg,#fff,#b995ff);-webkit-background-clip:text;background-clip:text;color:transparent}
-.sub{color:var(--muted);margin:0 0 26px;max-width:650px}.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}.card{background:linear-gradient(160deg,#151321,#0f0e17);border:1px solid var(--line);border-radius:19px;padding:20px;box-shadow:0 15px 45px #0003}
+.sub{color:var(--muted);margin:0 0 26px;max-width:650px}.grid{display:flex;flex-direction:column;gap:18px}.grid>.card{width:100%;min-width:0}.card{background:linear-gradient(160deg,#151321,#0f0e17);border:1px solid var(--line);border-radius:19px;padding:20px;box-shadow:0 15px 45px #0003}
 .card h2{font-size:16px;margin:0 0 15px}.step{color:#bda4ff;font-size:11px;letter-spacing:.12em;font-weight:800;margin-bottom:5px}
 .drop{border:1px dashed #625080;border-radius:15px;background:#171326;padding:25px 15px;text-align:center;transition:.2s}.drop.drag{border-color:#b995ff;background:#21183a}.drop strong{display:block;font-size:15px;margin-bottom:4px}.drop p{color:var(--muted);font-size:12px;margin:0 0 14px}
 button,.filebtn{border:0;border-radius:11px;background:linear-gradient(110deg,#a77aff,#7443e9);color:white;font-weight:750;padding:11px 16px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .15s,filter .15s}
@@ -179,7 +179,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.24 · MULTI-TRACK EDITOR</span>
+    <span class="badge">V2.26 · CLIPPING WORKSPACE</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -190,7 +190,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
         <div class="step">01 / IMPORT</div><h2>Upload your video</h2>
         <div class="drop" id="drop">
           <strong>Drop a video here</strong>
-          <p>Or choose a file from your phone</p>
+          <p>Choose a video from Gallery or browse a file saved on your device</p>
           <button type="button" class="filebtn" id="chooseFile">＋ Choose original video file</button>
           <input class="fileinput" id="file" type="file" accept="video/*,.mp4,.mov,.m4v,.webm,.3gp">
         </div>
@@ -245,30 +245,8 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
           <button type="button" class="secondary previewclipbtn" id="previewClip" disabled>▶ Preview selected clip</button>
         </div>
         </div>
-        <div class="formatbox">
-          <div class="smarttitle">▣ OUTPUT FORMAT</div>
-          <div class="formatrow three">
-            <div><label class="formatlabel" for="aspectRatio">Aspect ratio</label><select id="aspectRatio"><option value="original">Original video</option><option value="9:16" selected>9:16 · TikTok / Shorts / Reels</option><option value="1:1">1:1 · Square</option><option value="16:9">16:9 · Landscape</option><option value="custom">Custom ratio</option></select></div>
-            <div><label class="formatlabel">Export size</label><div id="formatSummary" class="timeline-time" style="padding:10px 0">1080 × 1920</div></div>
-            <div><label class="formatlabel" for="fitMode">Framing</label><select id="fitMode"><option value="fill" selected>Fill · crop edges</option><option value="fit">Fit · show all</option><option value="stretch">Stretch · distort</option></select></div>
-            <div><label class="formatlabel" for="renderSize">Export speed</label><select id="renderSize"><option value="quick" selected>Quick · 540p (mobile)</option><option value="fast">Fast · 720p</option><option value="hd">HD · 1080p</option></select></div>
-          </div>
-          <div class="customratio" id="customRatio">
-            <div><label class="formatlabel" for="customWidth">Width (px)</label><input id="customWidth" type="number" min="144" max="2160" step="2" value="1080" inputmode="numeric"></div>
-            <div><label class="formatlabel" for="customHeight">Height (px)</label><input id="customHeight" type="number" min="144" max="2160" step="2" value="1920" inputmode="numeric"></div>
-          </div>
-          <div class="framing" id="framingControls">
-            <div><div class="framehead"><label for="frameX">Horizontal position</label><output id="frameXValue">50%</output></div><input id="frameX" type="range" min="0" max="100" value="50"></div>
-            <div><div class="framehead"><label for="frameY">Vertical position</label><output id="frameYValue">50%</output></div><input id="frameY" type="range" min="0" max="100" value="50"></div>
-            <button type="button" class="secondary" id="resetFrame" style="width:100%">Reset crop position</button>
-          </div>
-          <p class="modehint" id="modeHint">Fill crops to cover the frame. Choose Fit to keep every part of the video, or Stretch to fill the frame with possible distortion. Fast 720p exports are quicker on phones than Full HD.</p>
-          <button type="button" class="secondary outputpreviewbtn" id="previewOutput">▶ Preview output</button>
-        </div>
-
-        
-        
         <div class="subtitlebox" id="subtitleEditor">
+          <div class="step">04 / CAPTIONS</div>
           <div class="subtitlehead">
             <div><div class="smarttitle">✎ SUBTITLE STUDIO</div><div class="subtitle-help">Add captions with start/end times in seconds. They appear over the preview and are burned into MP4 exports. SRT export remains available.</div></div>
             <button type="button" id="addSubtitle">＋ Add caption</button>
@@ -291,7 +269,8 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
 
 
         <section class="multitrack" id="multiTrackEditor" aria-label="Multi-track editor">
-          <div class="mt-head"><div class="mt-title">▤ MULTI-TRACK EDITOR</div><span class="badge">V2.24</span></div>
+          <div class="step">05 / AUDIO & TIMELINE</div>
+          <div class="mt-head"><div class="mt-title">▤ MULTI-TRACK EDITOR</div><span class="badge">V2.26</span></div>
           <p class="mt-sub">Arrange video, original sound, background music and captions on separate lanes. Music is mixed into exported MP4s.</p>
           <div class="mt-lanes">
             <div class="mt-lane"><div class="mt-label">VIDEO</div><div class="mt-track"><div class="mt-clip" id="mtVideoClip"><span class="mt-clip-label" id="mtVideoLabel">Select a video to build your timeline</span></div></div></div>
@@ -311,6 +290,29 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
           <div class="mt-foot"><span id="mtMusicName">No music selected</span><span id="mtDuration">Timeline waiting for video</span></div>
         </section>
 
+        <div class="formatbox">
+          <div class="step">06 / EXPORT SETTINGS</div><div class="smarttitle">▣ OUTPUT FORMAT</div>
+          <div class="formatrow three">
+            <div><label class="formatlabel" for="aspectRatio">Aspect ratio</label><select id="aspectRatio"><option value="original">Original video</option><option value="9:16" selected>9:16 · TikTok / Shorts / Reels</option><option value="1:1">1:1 · Square</option><option value="16:9">16:9 · Landscape</option><option value="custom">Custom ratio</option></select></div>
+            <div><label class="formatlabel">Export size</label><div id="formatSummary" class="timeline-time" style="padding:10px 0">1080 × 1920</div></div>
+            <div><label class="formatlabel" for="fitMode">Framing</label><select id="fitMode"><option value="fill" selected>Fill · crop edges</option><option value="fit">Fit · show all</option><option value="stretch">Stretch · distort</option></select></div>
+            <div><label class="formatlabel" for="renderSize">Export speed</label><select id="renderSize"><option value="quick" selected>Quick · 540p (mobile)</option><option value="fast">Fast · 720p</option><option value="hd">HD · 1080p</option></select></div>
+          </div>
+          <div class="customratio" id="customRatio">
+            <div><label class="formatlabel" for="customWidth">Width (px)</label><input id="customWidth" type="number" min="144" max="2160" step="2" value="1080" inputmode="numeric"></div>
+            <div><label class="formatlabel" for="customHeight">Height (px)</label><input id="customHeight" type="number" min="144" max="2160" step="2" value="1920" inputmode="numeric"></div>
+          </div>
+          <div class="framing" id="framingControls">
+            <div><div class="framehead"><label for="frameX">Horizontal position</label><output id="frameXValue">50%</output></div><input id="frameX" type="range" min="0" max="100" value="50"></div>
+            <div><div class="framehead"><label for="frameY">Vertical position</label><output id="frameYValue">50%</output></div><input id="frameY" type="range" min="0" max="100" value="50"></div>
+            <button type="button" class="secondary" id="resetFrame" style="width:100%">Reset crop position</button>
+          </div>
+          <p class="modehint" id="modeHint">Fill crops to cover the frame. Choose Fit to keep every part of the video, or Stretch to fill the frame with possible distortion. Fast 720p exports are quicker on phones than Full HD.</p>
+          <button type="button" class="secondary outputpreviewbtn" id="previewOutput">▶ Preview output</button>
+        </div>
+
+        
+        
         <div class="actions">
           <button class="secondary" id="setStart" disabled>Set start to preview</button>
           <button class="secondary" id="setEnd" disabled>Set end to preview</button>
@@ -324,7 +326,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
       </section>
     </div>
   </main>
-  <div class="foot">CLIPFORGE AI · V2.24 · MULTI-TRACK EDITOR</div>
+  <div class="foot">CLIPFORGE AI · V2.26 · CLIPPING WORKSPACE</div>
 </div>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -458,10 +460,26 @@ function tryDataUrlFallback(file, attempt) {
   fileReaderFallbackTried = true;
   setStatus('The browser could not read the local video URL. Trying a compatibility fallback…');
   const reader = new FileReader();
-  reader.onerror = () => {
+  reader.onerror = async () => {
     if (attempt !== loadAttempt) return;
-    clearMediaLoadTimer();
-    setStatus('This browser could not read the selected video. Try opening the page from an HTTPS website, then choose the video again.', 'bad');
+    try {
+      // Retry Android gallery-provider files through the File/Blob API.
+      const bytes = await file.arrayBuffer();
+      if (attempt !== loadAttempt || !bytes.byteLength) throw new Error('Empty video data');
+      if (sourceURL) URL.revokeObjectURL(sourceURL);
+      sourceURL = URL.createObjectURL(new Blob([bytes], {type:file.type || 'video/mp4'}));
+      source.src = sourceURL;
+      source.load();
+      clearMediaLoadTimer();
+      metadataTimer = setTimeout(() => {
+        if (attempt !== loadAttempt || Number.isFinite(source.duration)) return;
+        setStatus('The selected file opened, but this browser cannot decode its video. Try an MP4 (H.264) copy saved on this device.', 'bad');
+      }, 12000);
+    } catch (error) {
+      if (attempt !== loadAttempt) return;
+      clearMediaLoadTimer();
+      setStatus('Android did not give this browser readable access to that Gallery item. Save or download the video to your device first, then choose it from Files (Downloads).', 'bad');
+    }
   };
   reader.onload = () => {
     if (attempt !== loadAttempt) return;
