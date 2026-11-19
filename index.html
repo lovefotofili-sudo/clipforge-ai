@@ -147,7 +147,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.12 · RELIABLE MOBILE SCANNING</span>
+    <span class="badge">V2.13 · QUICK MOBILE SCAN</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -830,7 +830,7 @@ async function seekForScan(time) {
   for(let attempt=0;attempt<2;attempt++){
     try{
       source.currentTime=target+(attempt?0.015:0);
-      await waitForDecodedScanFrame(target+(attempt?0.015:0),attempt?18000:14000);
+      await waitForDecodedScanFrame(target+(attempt?0.015:0),attempt?7000:5000);
       return;
     }catch(error){
       if(attempt===1)throw error;
@@ -848,9 +848,9 @@ async function findBestMoments() {
   source.pause();
   try {
     const duration = source.duration;
-    const step = Math.max(0.75, duration / 60);
-    // Smaller analysis frames and a 60-sample ceiling reduce seek and pixel work on phones.
-    const width = 48, height = 27;
+    const step = Math.max(1.5, duration / 18);
+    // Quick mobile scan: cap at 18 samples and use a tiny analysis frame.
+    const width = 32, height = 18;
     const canvas = document.createElement('canvas');
     canvas.width = width; canvas.height = height;
     const ctx = canvas.getContext('2d', {willReadFrequently:true});
@@ -907,7 +907,7 @@ async function findBestMoments() {
       }
       samples.push({time:t, motion, coverage:cellCount ? changedCells/cellCount : 0, cut, edgeEnergy});
       previous = {gray, meanLuma, meanR, meanG, meanB, histogram};
-      if (samples.length % 6 === 0) $('smartStatus').textContent = 'Fast scan… ' + Math.min(99, Math.round(t / duration * 100)) + '%';
+      if (samples.length % 3 === 0) $('smartStatus').textContent = 'Quick scan… ' + Math.min(99, Math.round(t / duration * 100)) + '%';
     }
     if (duration < 2.5 || samples.length < 4) throw new Error('This video is too short to analyse. Try a video at least 3 seconds long.');
     const candidates = [];
