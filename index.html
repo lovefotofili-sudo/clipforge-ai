@@ -299,8 +299,9 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
             <div class="mt-lane"><div class="mt-label">MUSIC</div><div class="mt-track"><div class="mt-empty" id="mtMusicEmpty">Add a music file to this track</div><div class="mt-clip music mt-hidden" id="mtMusicClip"><span class="mt-clip-label" id="mtMusicLabel"></span></div></div></div>
             <div class="mt-lane"><div class="mt-label">SUBTITLES</div><div class="mt-track" id="mtCaptionTrack"><div class="mt-empty" id="mtCaptionEmpty">Caption segments appear here</div></div></div>
           </div>
-          <div class="mt-actions"><button type="button" class="secondary" id="chooseMusic">＋ Add music / audio</button><button type="button" class="secondary" id="removeMusic" disabled>Remove music</button></div>
-          <input id="musicFile" type="file" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg,.flac" hidden>
+          <div class="mt-actions"><button type="button" class="secondary" id="chooseMusic">＋ Add audio or video from device</button><button type="button" class="secondary" id="removeMusic" disabled>Remove music</button></div>
+          <input id="musicFile" type="file" accept="audio/*,video/*,.mp3,.m4a,.wav,.aac,.ogg,.flac,.mp4,.m4v,.mov,.webm,.mkv,.3gp" hidden>
+          <p class="note">Choose an audio file from Files, or a video from Gallery/Photos to use its soundtrack. Videos must contain audio.</p>
           <div class="mt-controls">
             <div class="mt-control"><label for="musicStart">Music starts at (video seconds)</label><input id="musicStart" type="number" min="0" step="0.1" value="0" inputmode="decimal" disabled></div>
             <div class="mt-control"><label for="musicVolume">Music volume · <output id="musicVolumeValue">35%</output></label><input id="musicVolume" type="range" min="0" max="100" value="35" disabled></div>
@@ -328,7 +329,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
 <script type="module">
 const $ = id => document.getElementById(id);
 const source = $('source');
-const musicAudio = new Audio(); musicAudio.preload = 'metadata';
+const musicAudio = document.createElement('video'); musicAudio.preload = 'metadata'; musicAudio.playsInline = true; musicAudio.controls = false; musicAudio.setAttribute('aria-hidden','true'); musicAudio.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-10px;top:-10px'; document.body.appendChild(musicAudio);
 let musicFile = null, musicURL = null;
 let ffmpeg = null;
 let engineReady = false;
@@ -1683,12 +1684,17 @@ function syncMusicPreview(forceSeek=false){
 $('chooseMusic').addEventListener('click',()=>$('musicFile').click());
 $('musicFile').addEventListener('change',()=>{
   const file=$('musicFile').files?.[0];if(!file)return;
-  if(!file.type.startsWith('audio/')&&!/\.(mp3|m4a|wav|aac|ogg|flac)$/i.test(file.name)){setStatus('Choose a supported audio file such as MP3, M4A or WAV.','bad');return;}
+  const audioExt=/\.(mp3|m4a|wav|aac|ogg|flac)$/i.test(file.name);
+  const videoExt=/\.(mp4|m4v|mov|webm|mkv|3gp)$/i.test(file.name);
+  const isAudio=file.type.startsWith('audio/')||audioExt;
+  const isVideo=file.type.startsWith('video/')||videoExt;
+  if(!isAudio&&!isVideo){setStatus('Choose an audio file or a video containing an audio track.','bad');$('musicFile').value='';return;}
   if(musicURL)URL.revokeObjectURL(musicURL);
   musicFile=file;musicURL=URL.createObjectURL(file);musicAudio.src=musicURL;musicAudio.load();
   $('musicStart').disabled=false;$('musicVolume').disabled=false;$('removeMusic').disabled=false;
-  $('mtMusicName').textContent=file.name+' · '+formatBytes(file.size);renderMultiTrackTimeline();syncMusicPreview(true);
-  setStatus('Music added to its own track. Adjust its start and volume, then export.','good');
+  $('mtMusicName').textContent=(isVideo?'Gallery video audio · ':'Audio · ')+file.name+' · '+formatBytes(file.size);
+  renderMultiTrackTimeline();syncMusicPreview(true);
+  setStatus(isVideo?'Video selected. Its soundtrack will be added to your music track.':'Audio added to its own track. Adjust its start and volume, then export.','good');
 });
 $('removeMusic').addEventListener('click',()=>{
   musicAudio.pause();musicAudio.removeAttribute('src');musicAudio.load();if(musicURL)URL.revokeObjectURL(musicURL);
