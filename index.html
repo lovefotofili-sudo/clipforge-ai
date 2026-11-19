@@ -1332,9 +1332,12 @@ $('export').addEventListener('click', async () => {
     }
     const sourceRatio = source.videoWidth && source.videoHeight ? source.videoWidth / source.videoHeight : 0;
     const targetRatio = dimensions ? dimensions.width / dimensions.height : 0;
-    // If the requested frame already matches the source, avoid a full encode.
-    // Stream-copy keeps original quality and is dramatically faster on phones.
-    const needsTransform = exportCaptions.length > 0 || Boolean(dimensions && Math.abs(sourceRatio - targetRatio) > 0.012);
+    const requestedRender = dimensions ? getRenderDimensions(dimensions) : null;
+    const sourceFitsRequested = requestedRender && source.videoWidth <= requestedRender.width && source.videoHeight <= requestedRender.height;
+    // Stream-copy only when no crop, resize or caption burn-in is required.
+    const needsTransform = exportCaptions.length > 0 || Boolean(dimensions && (
+      Math.abs(sourceRatio - targetRatio) > 0.012 || !sourceFitsRequested
+    ));
     if (needsTransform) {
       let filter = '';
       if (dimensions) {
