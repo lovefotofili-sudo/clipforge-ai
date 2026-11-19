@@ -328,7 +328,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
       </section>
     </div>
   </main>
-  <div class="foot">CLIPFORGE AI · V2.32 · CLIPPING WORKSPACE</div>
+  <div class="foot">CLIPFORGE AI · V2.33 · CLIPPING WORKSPACE</div>
 </div>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -341,6 +341,7 @@ let busy = false;
 let momentQueue = [];
 let activeQueueId = null;
 let queueCounter = 0;
+let queueAutoRun = false;
 let ffmpegProgressLabel = 'Rendering clip';
 
 async function fetchFile(file) {
@@ -438,7 +439,7 @@ function validateTimes() {
 function updateButtons() {
   if (typeof enableAutoTranscribe === 'function') enableAutoTranscribe();
   $('findMoments').disabled = busy || momentScanBusy || !selectedFile || !Number.isFinite(source.duration);
-  $('exportNext').disabled = busy || momentQueue.length === 0;
+  $('exportNext').disabled = busy || !fileBytesReady || !momentQueue.some(item=>item.status!=='completed' && item.status!=='exporting');
   $('clearQueue').disabled = busy || momentQueue.length === 0;
   $('export').disabled = busy || !validateTimes(); $('export').textContent = busy ? 'Exporting… please wait' : 'Fast export MP4 ↗';
   $('setStart').disabled = busy || !selectedFile;
@@ -1335,31 +1336,55 @@ function applyMoment(moment) {
 function renderMomentQueue() {
   const list = $('queueList');
   if (!list) return;
-  $('queueCount').textContent = momentQueue.length + ' selected';
+  const completed=momentQueue.filter(item=>item.status==='completed').length;
+  const failed=momentQueue.filter(item=>item.status==='failed').length;
+  $('queueCount').textContent = momentQueue.length + ' clips · ' + completed + ' complete' + (failed?' · '+failed+' failed':'');
   $('clearQueue').disabled = busy || momentQueue.length === 0;
-  $('exportNext').disabled = busy || !fileBytesReady || momentQueue.length === 0;
+  $('exportNext').disabled = busy || !fileBytesReady || !momentQueue.some(item=>item.status==='pending' || item.status==='failed');
+  $('exportNext').textContent = 'Export all clips';
   if (!momentQueue.length) { list.className='queueempty'; list.textContent='Add suggested moments to build an export queue.'; updateButtons(); return; }
   list.className='';
-  list.innerHTML = momentQueue.map((m,i)=>'<div class="queueitem"><span>Clip '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(source.duration,m.end).toFixed(1)+'s</span><span><button type="button" class="secondary" data-up="'+i+'" '+(i===0?'disabled':'')+'>↑</button> <button type="button" class="secondary" data-down="'+i+'" '+(i===momentQueue.length-1?'disabled':'')+'>↓</button> <button type="button" class="secondary" data-remove="'+i+'">✕</button></span></div>').join('');
-  list.querySelectorAll('[data-up]').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.up);[momentQueue[i-1],momentQueue[i]]=[momentQueue[i],momentQueue[i-1]];renderMomentQueue();}));
-  list.querySelectorAll('[data-down]').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.down);[momentQueue[i+1],momentQueue[i]]=[momentQueue[i],momentQueue[i+1]];renderMomentQueue();}));
-  list.querySelectorAll('[data-remove]').forEach(b=>b.addEventListener('click',()=>{momentQueue.splice(Number(b.dataset.remove),1);renderMomentQueue();}));
+  list.innerHTML = momentQueue.map((m,i)=>{
+    const state=m.status==='completed'?'✓ Complete':m.status==='failed'?'Failed · retry available':m.status==='exporting'?'Exporting…':'Waiting';
+    const download=m.status==='completed'&&m.downloadURL?'<a class="filebtn" style="padding:6px 9px;font-size:10px;text-decoration:none" href="'+m.downloadURL+'" download="clipforge-clip-'+(i+1)+'.mp4">↓ MP4</a>':'';
+    const retry=m.status==='failed'?'<button type="button" class="secondary" data-retry="'+i+'">Retry</button>':'';
+    const reorder=m.status==='pending'?'<button type="button" class="secondary" data-up="'+i+'" '+(i===0?'disabled':'')+'>↑</button> <button type="button" class="secondary" data-down="'+i+'" '+(i===momentQueue.length-1?'disabled':'')+'>↓</button>':'';
+    const remove=m.status!=='exporting'?'<button type="button" class="secondary" data-remove="'+i+'">✕</button>':'';
+    return '<div class="queueitem"><span>Clip '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(source.duration,m.end).toFixed(1)+'s<br><small>'+state+'</small></span><span>'+download+' '+retry+' '+reorder+' '+remove+'</span></div>';
+  }).join('');
+  list.querySelectorAll('[data-up]').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.up);if(i>0){[momentQueue[i-1],momentQueue[i]]=[momentQueue[i],momentQueue[i-1]];renderMomentQueue();}}));
+  list.querySelectorAll('[data-down]').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.down);if(i<momentQueue.length-1){[momentQueue[i+1],momentQueue[i]]=[momentQueue[i],momentQueue[i+1]];renderMomentQueue();}}));
+  list.querySelectorAll('[data-remove]').forEach(b=>b.addEventListener('click',()=>{const item=momentQueue[Number(b.dataset.remove)];if(item?.downloadURL)URL.revokeObjectURL(item.downloadURL);momentQueue.splice(Number(b.dataset.remove),1);renderMomentQueue();}));
+  list.querySelectorAll('[data-retry]').forEach(b=>b.addEventListener('click',()=>{const item=momentQueue[Number(b.dataset.retry)];if(!item||busy)return;queueAutoRun=false;startQueuedExport(item);}));
   updateButtons();
+}
+function startQueuedExport(item) {
+  if(!item||busy||!fileBytesReady)return;
+  item.status='exporting';
+  applyMoment(item);
+  activeQueueId=item.id;
+  renderMomentQueue();
+  $('smartStatus').textContent='Exporting clip '+(momentQueue.indexOf(item)+1)+' of '+momentQueue.length+'.';
+  $('export').click();
+}
+function startNextQueuedExport() {
+  const next=momentQueue.find(item=>item.status==='pending');
+  if(!next){queueAutoRun=false;$('smartStatus').textContent='Queue finished. Download each completed MP4 from its clip row.';return;}
+  startQueuedExport(next);
 }
 function addMomentToQueue(moment) {
   if (!moment || momentQueue.some(x=>Math.abs(x.start-moment.start)<0.4 && Math.abs(x.end-moment.end)<0.8)) return;
-  momentQueue.push({...moment,id:++queueCounter});
+  momentQueue.push({...moment,id:++queueCounter,status:'pending',downloadURL:null});
   renderMomentQueue();
   $('smartStatus').textContent='Moment added to the clip queue.';
 }
-$('clearQueue').addEventListener('click',()=>{momentQueue=[];activeQueueId=null;renderMomentQueue();});
+$('clearQueue').addEventListener('click',()=>{if(busy)return;momentQueue.forEach(item=>{if(item.downloadURL)URL.revokeObjectURL(item.downloadURL);});momentQueue=[];activeQueueId=null;queueAutoRun=false;renderMomentQueue();});
 $('exportNext').addEventListener('click',()=>{
-  if (!momentQueue.length || busy || !fileBytesReady) return;
-  const next=momentQueue[0];
-  applyMoment(next);
-  activeQueueId=next.id;
-  $('smartStatus').textContent='Exporting queued clip 1 of '+momentQueue.length+'. Download it when the MP4 is ready.';
-  $('export').click();
+  if (busy || !fileBytesReady || !momentQueue.some(item=>item.status==='pending' || item.status==='failed')) return;
+  const failed=momentQueue.find(item=>item.status==='failed');
+  if(failed){queueAutoRun=false;startQueuedExport(failed);return;}
+  queueAutoRun=true;
+  startNextQueuedExport();
 });
 
 /* V1.7 subtitle editor: editable captions + local Whisper transcription + live preview + SRT export */
@@ -1742,14 +1767,18 @@ $('export').addEventListener('click', async () => {
     $('exportProgressText').textContent = '100% · Export complete';
     $('exportStage').textContent = 'Export complete · Your MP4 is ready';
     setStatus(`Finished! Your MP4 is ready (${formatBytes(data.length)}).`, 'good');
-    if (activeQueueId !== null && momentQueue[0]?.id === activeQueueId) {
-      momentQueue.shift(); activeQueueId=null; renderMomentQueue();
-      $('smartStatus').textContent='Queued clip exported. Download it, then export the next clip when ready.';
+    if (activeQueueId !== null) {
+      const finished=momentQueue.find(item=>item.id===activeQueueId);
+      if(finished){finished.status='completed';finished.downloadURL=URL.createObjectURL(outputBlob);}
+      activeQueueId=null;renderMomentQueue();
+      if(queueAutoRun){$('smartStatus').textContent='Clip complete. Preparing the next queued export…';setTimeout(startNextQueuedExport,180);}
+      else $('smartStatus').textContent='Clip exported. Its MP4 is saved in the queue row; retry any failed clips there.';
     }
     try { await ffmpeg.deleteFile(inputName); await ffmpeg.deleteFile(outputName); await ffmpeg.deleteFile('clipforge-font.ttf'); for (const name of subtitleFiles) await ffmpeg.deleteFile(name); if (musicTempName) await ffmpeg.deleteFile(musicTempName); } catch {}
   } catch (err) {
     console.error('[CLIPFORGE export error]', err);
     const message = err?.message || String(err);
+    if(activeQueueId!==null){const failed=momentQueue.find(item=>item.id===activeQueueId);if(failed)failed.status='failed';activeQueueId=null;queueAutoRun=false;renderMomentQueue();$('smartStatus').textContent='Queue paused because one clip failed. Retry that clip or export the remaining clips.';}
     $('exportStage').textContent = 'Export stopped · ' + message;
     $('exportProgressText').textContent = 'Export stopped · Your source video and edits are still in this session. You can try again.';
     setStatus(`Export failed: ${message}. Your current edits are still available; check the error and retry without reloading if possible.`, 'bad');
