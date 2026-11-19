@@ -1524,6 +1524,7 @@ $('export').addEventListener('click', async () => {
     const length = endSnapshot - startSnapshot;
     let exitCode = 1;
     const subtitleFiles = [];
+    let musicTempName = null;
     let exportFilter = '';
     if (exportCaptions.length) {
       $('exportStage').textContent = 'Step 3 of 4 · Preparing subtitles';
@@ -1582,7 +1583,7 @@ $('export').addEventListener('click', async () => {
 
       const audioArgs=[];let audioMap=['-map','0:a?'];
       if(musicSnapshot){
-        const musicExt=(musicSnapshot.name.split('.').pop()||'mp3').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp3',musicName='clipforge-music.'+musicExt;
+        const musicExt=(musicSnapshot.name.split('.').pop()||'mp3').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp3',musicName='clipforge-music.'+musicExt; musicTempName=musicName;
         await ffmpeg.writeFile(musicName,new Uint8Array(await musicSnapshot.arrayBuffer()));audioArgs.push('-i',musicName);
         const delay=Math.max(0,musicStartSnapshot-start),trim=Math.max(0,start-musicStartSnapshot),musicDuration=Math.max(.05,length-delay);
         const chain='[1:a]atrim=start='+trim.toFixed(3)+':duration='+musicDuration.toFixed(3)+',asetpts=PTS-STARTPTS,volume='+musicVolumeSnapshot.toFixed(2)+',adelay='+Math.round(delay*1000)+'|'+Math.round(delay*1000)+'[music]';
@@ -1639,7 +1640,7 @@ $('export').addEventListener('click', async () => {
       momentQueue.shift(); activeQueueId=null; renderMomentQueue();
       $('smartStatus').textContent='Queued clip exported. Download it, then export the next clip when ready.';
     }
-    try { await ffmpeg.deleteFile(inputName); await ffmpeg.deleteFile(outputName); await ffmpeg.deleteFile('clipforge-font.ttf'); for (const name of subtitleFiles) await ffmpeg.deleteFile(name); } catch {}
+    try { await ffmpeg.deleteFile(inputName); await ffmpeg.deleteFile(outputName); await ffmpeg.deleteFile('clipforge-font.ttf'); for (const name of subtitleFiles) await ffmpeg.deleteFile(name); if (musicTempName) await ffmpeg.deleteFile(musicTempName); } catch {}
   } catch (err) {
     console.error('[CLIPFORGE export error]', err);
     const message = err?.message || String(err);
