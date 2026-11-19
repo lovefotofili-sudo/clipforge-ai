@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#08070d">
-<title>CLIPFORGE AI — Smart Clip Collections</title>
+<title>CLIPFORGE AI — V3.0 Development</title>
 <style>
 :root{color-scheme:dark;--bg:#08070d;--panel:#11101a;--panel2:#171523;--line:#292538;--muted:#9691a8;--text:#f6f3ff;--purple:#9b6cff;--purple2:#6d3ee8;--good:#79e0b0;--danger:#ff8585}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#241344 0,transparent 45%),var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
@@ -77,7 +77,7 @@ button:hover,.filebtn:hover{filter:brightness(1.12);transform:translateY(-1px)}b
 
 .empty{border:1px solid var(--line);border-radius:13px;background:#09080e;color:#777184;min-height:170px;display:grid;place-items:center;text-align:center;padding:20px;font-size:13px}
 .controls{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}.field input{width:100%;background:#0b0a11;border:1px solid #39334b;border-radius:10px;color:white;padding:11px;font:inherit}
-.hint{font-size:11px;color:var(--muted);margin-top:9px}.smartbox{margin-top:14px;padding:13px;border:1px solid #463565;border-radius:12px;background:#171326}.smarttitle{font-size:12px;font-weight:800;color:#d8c8ff;margin-bottom:5px}.smartdesc{font-size:11px;color:var(--muted);margin:0 0 10px}.smartbtn{width:100%}.momentlist{display:grid;gap:8px;margin-top:10px}.moment{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;background:#0d0b14;border:1px solid var(--line);border-radius:9px;font-size:11px}.moment-info{display:grid;gap:3px;min-width:0}.moment-info strong{color:#e6dcff;font-size:11px}.moment-info small{color:var(--muted);font-size:10px;line-height:1.4}.moment button{padding:7px 10px;font-size:11px;white-space:nowrap}.moment-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.queuebox{margin-top:12px;padding:12px;border:1px solid #463565;border-radius:11px;background:#100e18}.queuehead{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;color:#d8c8ff;font-weight:800}.queueitem{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;margin-top:7px;background:#0b0a11;border:1px solid var(--line);border-radius:8px;font-size:11px}.queueitem button{padding:6px 8px;font-size:10px}.queueactions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.queueactions button{width:100%;padding:9px 8px;font-size:11px}.queueempty{font-size:11px;color:var(--muted);margin-top:8px}.smartstatus{font-size:11px;color:var(--muted);margin-top:8px;min-height:16px}.duration{font-size:12px;color:#c7b5f5;margin-top:10px}
+.hint{font-size:11px;color:var(--muted);margin-top:9px}.smartbox{margin-top:14px;padding:13px;border:1px solid #463565;border-radius:12px;background:#171326}.smarttitle{font-size:12px;font-weight:800;color:#d8c8ff;margin-bottom:5px}.smartdesc{font-size:11px;color:var(--muted);margin:0 0 10px}.smartbtn{width:100%}.momentlist{display:grid;gap:8px;margin-top:10px}.moment{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;background:#0d0b14;border:1px solid var(--line);border-radius:9px;font-size:11px}.moment-info{display:grid;gap:3px;min-width:0}.moment-info strong{color:#e6dcff;font-size:11px}.moment-info small{color:var(--muted);font-size:10px;line-height:1.4}.moment button{padding:7px 10px;font-size:11px;white-space:nowrap}.moment-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.queuebox{margin-top:12px;padding:12px;border:1px solid #463565;border-radius:11px;background:#100e18}.queuehead{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;color:#d8c8ff;font-weight:800}.queueitem{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;margin-top:7px;background:#0b0a11;border:1px solid var(--line);border-radius:8px;font-size:11px}.queueitem button{padding:6px 8px;font-size:10px}.queueactions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.queueactions button{width:100%;padding:9px 8px;font-size:11px}.collection-summary{font-size:11px;color:#d8c8ff;padding:9px 10px;border:1px solid #39334b;border-radius:9px;background:#0b0a11;font-variant-numeric:tabular-nums}.collection-toolbar{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.collection-toolbar button{font-size:10px;padding:9px 7px;min-height:38px}.collection-toolbar button:last-child{grid-column:1/-1}.collection-group{padding:10px;border:1px solid #39334b;border-radius:10px;background:#0b0a11}.collection-group-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.collection-group-head>div{display:grid;gap:2px}.collection-group-head strong{font-size:11px;color:#e6dcff}.collection-group-head small{font-size:10px;color:var(--muted)}.collection-group-head button{padding:7px 9px;font-size:10px;min-height:36px}.collection-clip{display:flex;align-items:center;gap:9px;padding:8px 7px;border-top:1px solid #292538;cursor:pointer}.collection-clip input{width:17px;height:17px;flex:0 0 auto;accent-color:#a78bfa}.collection-clip span{display:grid;gap:2px;min-width:0}.collection-clip strong{font-size:10px;color:#e6dcff;font-weight:700}.collection-clip small{font-size:9px;color:var(--muted)}@media(max-width:420px){.collection-toolbar{grid-template-columns:1fr 1fr}.collection-group-head{align-items:flex-start}.collection-group-head button{white-space:normal;max-width:125px}}.queueempty{font-size:11px;color:var(--muted);margin-top:8px}.smartstatus{font-size:11px;color:var(--muted);margin-top:8px;min-height:16px}.duration{font-size:12px;color:#c7b5f5;margin-top:10px}
 .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.primary{width:100%;padding:14px;font-size:14px}
 .status{margin-top:15px;padding:11px 12px;border-radius:10px;background:#0b0a11;border:1px solid var(--line);font-size:12px;color:var(--muted);min-height:42px;overflow-wrap:anywhere}
 .status.good{color:var(--good);border-color:#285a48}.status.bad{color:var(--danger);border-color:#633535}
@@ -179,12 +179,12 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.40 · SMART CLIP COLLECTIONS</span>
+    <span class="badge">V3.0 DEVELOPMENT · MILESTONE 1</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
     <h1>Long video in.<br><span class="grad">Perfect clip out.</span></h1>
-    <p class="sub">Find promising moments at different lengths, review the ranked suggestions, then export the clip you want. Your video is processed in this browser.</p>
+    <p class="sub">Find promising moments, organise them into collections, choose the exact clips you want, then export. Your video is processed in this browser.</p>
     <div class="grid">
       <section class="card">
         <div class="step">01 / IMPORT</div><h2>Upload your video</h2>
@@ -239,7 +239,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
             <button type="button" class="secondary" id="endForward">End +0.1s</button>
           </div>
         </div>
-        <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Finds different highlight types — action bursts, scene changes, building momentum and sustained activity. Filter the suggestions by category; labels are inferred from sampled visual signals, not story understanding.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div id="categoryFilters" style="display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 4px"></div><div class="momentlist" id="momentList"></div><div class="collectionsbox" id="clipCollections" style="display:none;margin-top:14px;padding:13px;border:1px solid #463565;border-radius:12px;background:#100e18"><div class="smarttitle">SMART CLIP COLLECTIONS</div><p class="smartdesc">Group detected moments by highlight type and add a whole collection to your export queue.</p><div id="collectionList" class="momentlist"></div></div><div class="queuebox"><div class="queuehead"><span>CLIP QUEUE</span><span id="queueCount">0 selected</span></div><div id="queueList" class="queueempty">Add suggested moments to build an export queue.</div><div class="queueactions"><button type="button" class="secondary" id="exportNext" disabled>Export all clips</button><button type="button" class="secondary" id="downloadZip" disabled>↓ Download completed ZIP</button><button type="button" class="secondary" id="clearQueue" disabled>Clear queue</button></div><p class="preview-help">Each clip gets a numbered filename with its time range. Download individual MP4s or package completed clips into one ZIP. ZIP creation needs extra free device memory.</p></div></div>
+        <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Finds different highlight types — action bursts, scene changes, building momentum and sustained activity. Filter the suggestions by category; labels are inferred from sampled visual signals, not story understanding.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div id="categoryFilters" style="display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 4px"></div><div class="momentlist" id="momentList"></div><div class="collectionsbox" id="clipCollections" style="display:none;margin-top:14px;padding:13px;border:1px solid #463565;border-radius:12px;background:#100e18"><div class="smarttitle">SMART COLLECTION MANAGER</div><p class="smartdesc">Choose exactly which detected clips you want. Selections can span multiple collections before you queue them together.</p><div id="collectionSummary" class="collection-summary" aria-live="polite"></div><div class="collection-toolbar"><button type="button" class="secondary" id="selectAllCollectionClips">Select all</button><button type="button" class="secondary" id="clearCollectionSelection">Clear selection</button><button type="button" id="queueSelectedCollections">＋ Queue selected clips</button></div><div id="collectionList" class="momentlist"></div></div><div class="queuebox"><div class="queuehead"><span>CLIP QUEUE</span><span id="queueCount">0 selected</span></div><div id="queueList" class="queueempty">Add suggested moments to build an export queue.</div><div class="queueactions"><button type="button" class="secondary" id="exportNext" disabled>Export all clips</button><button type="button" class="secondary" id="downloadZip" disabled>↓ Download completed ZIP</button><button type="button" class="secondary" id="clearQueue" disabled>Clear queue</button></div><p class="preview-help">Each clip gets a numbered filename with its time range. Download individual MP4s or package completed clips into one ZIP. ZIP creation needs extra free device memory.</p></div></div>
         <div class="clip-preview-panel">
           <div><div class="smarttitle">▶ CLIP PREVIEW</div><p class="preview-help">Preview your selected start and end times here. Output ratio and framing settings are separate below.</p></div>
           <button type="button" class="secondary previewclipbtn" id="previewClip" disabled>▶ Preview selected clip</button>
@@ -1366,19 +1366,50 @@ async function findBestMoments() {
         const fixButton = m.qualityFlags.some(flag=>flag.includes('mid-action')) ? '<button type="button" class="secondary" data-qcfix="'+i+'">Apply boundary suggestion</button>' : '';
         return '<div class="moment" data-highlight-category="'+m.highlightCategory+'"><div class="moment-info"><strong>Moment '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(duration,m.end).toFixed(1)+'s</strong><small>Relative rank '+rating+' · Visual signal '+m.visualSignal+'/100 ('+signalLabel.toLowerCase()+') · Stability '+m.stabilityScore+'/100 · Length fit '+m.durationScore+'/100 · '+explainMoment(m)+'</small><small style="display:inline-block;margin-top:5px;padding:2px 8px;border:1px solid #5b467e;border-radius:99px;color:#d7c5ff">'+m.highlightCategory+'</small><small style="display:block;margin-top:4px;color:#cbb8ff">Pattern: '+m.varietyType+' · Selection score '+(m.varietyScore??m.rankScore)+'</small><small style="display:block;margin-top:5px;color:'+(m.qualityFlags.length?'#ffd18a':'#79e0b0')+'">'+qcText+'</small></div><div class="moment-actions"><button type="button" class="secondary" data-preview="'+i+'">▶ Preview</button>'+fixButton+'<button type="button" data-queue="'+i+'">＋ Queue</button></div></div>';
       }).join('');
-      const collectionGroups=categoryOrder.map(category=>({category,items:chosen.filter(item=>item.highlightCategory===category)})).filter(group=>group.items.length);
+      const collectionGroups=categoryOrder.map(category=>({category,items:chosen.map((item,momentIndex)=>({item,momentIndex})).filter(entry=>entry.item.highlightCategory===category)})).filter(group=>group.items.length);
+      const selectedCollectionClips=new Set(chosen.map((_,index)=>index));
       $('clipCollections').style.display=collectionGroups.length?'block':'none';
-      $('collectionList').innerHTML=collectionGroups.map((group,index)=>{
-        const times=group.items.map(item=>item.start.toFixed(1)+'s–'+Math.min(duration,item.end).toFixed(1)+'s').join(' · ');
-        return '<div class="moment"><div class="moment-info"><strong>'+group.category+' · '+group.items.length+' clip'+(group.items.length===1?'':'s')+'</strong><small>'+times+'</small></div><button type="button" data-queue-collection="'+index+'">＋ Queue collection</button></div>';
-      }).join('');
-      [...$('collectionList').querySelectorAll('[data-queue-collection]')].forEach(button=>button.addEventListener('click',()=>{
-        const group=collectionGroups[Number(button.dataset.queueCollection)];
-        if(!group)return;
+      const renderCollectionManager=()=>{
+        const selectedCount=selectedCollectionClips.size;
+        $('collectionSummary').textContent=selectedCount+' of '+chosen.length+' clips selected · '+collectionGroups.length+' collection'+(collectionGroups.length===1?'':'s')+' · '+collectionGroups.reduce((sum,group)=>sum+group.items.length,0)+' total clips';
+        $('queueSelectedCollections').disabled=selectedCount===0;
+        $('selectAllCollectionClips').disabled=selectedCount===chosen.length;
+        $('clearCollectionSelection').disabled=selectedCount===0;
+        $('collectionList').innerHTML=collectionGroups.map((group,index)=>{
+          const groupSelected=group.items.filter(entry=>selectedCollectionClips.has(entry.momentIndex)).length;
+          const clips=group.items.map(entry=>{
+            const item=entry.item,idx=entry.momentIndex;
+            return '<label class="collection-clip"><input type="checkbox" data-collection-clip="'+idx+'" '+(selectedCollectionClips.has(idx)?'checked':'')+'><span><strong>Clip '+(idx+1)+' · '+item.start.toFixed(1)+'s–'+Math.min(duration,item.end).toFixed(1)+'s</strong><small>'+item.highlightCategory+' · '+item.varietyType+'</small></span></label>';
+          }).join('');
+          return '<section class="collection-group"><div class="collection-group-head"><div><strong>'+group.category+'</strong><small data-group-count="'+index+'">'+groupSelected+' of '+group.items.length+' selected</small></div><button type="button" class="secondary" data-queue-group="'+index+'" '+(groupSelected===0?'disabled':'')+'>＋ Queue selected</button></div>'+clips+'</section>';
+        }).join('');
+        $('collectionList').querySelectorAll('[data-collection-clip]').forEach(input=>input.addEventListener('change',()=>{
+          const idx=Number(input.dataset.collectionClip);
+          if(input.checked)selectedCollectionClips.add(idx);else selectedCollectionClips.delete(idx);
+          renderCollectionManager();
+        }));
+        $('collectionList').querySelectorAll('[data-queue-group]').forEach(button=>button.addEventListener('click',()=>{
+          const group=collectionGroups[Number(button.dataset.queueGroup)];
+          if(!group)return;
+          const picked=group.items.filter(entry=>selectedCollectionClips.has(entry.momentIndex));
+          let added=0;
+          picked.forEach(entry=>{const before=momentQueue.length;addMomentToQueue(entry.item,group.category);if(momentQueue.length>before)added++;});
+          $('smartStatus').textContent=added?added+' selected clip(s) from '+group.category+' added to the queue.':picked.length?'Those clips are already in the queue.':'Select clips in this collection first.';
+        }));
+      };
+      $('selectAllCollectionClips').onclick=()=>{chosen.forEach((_,index)=>selectedCollectionClips.add(index));renderCollectionManager();};
+      $('clearCollectionSelection').onclick=()=>{selectedCollectionClips.clear();renderCollectionManager();};
+      $('queueSelectedCollections').onclick=()=>{
         let added=0;
-        group.items.forEach(item=>{const before=momentQueue.length;addMomentToQueue(item,group.category);if(momentQueue.length>before)added++;});
-        $('smartStatus').textContent=added?added+' clip(s) from '+group.category+' added to the queue.':'Those clips are already in the queue.';
-      }));
+        chosen.forEach((item,index)=>{
+          if(!selectedCollectionClips.has(index))return;
+          const before=momentQueue.length;
+          addMomentToQueue(item,item.highlightCategory);
+          if(momentQueue.length>before)added++;
+        });
+        $('smartStatus').textContent=added?added+' selected clip(s) from '+collectionGroups.length+' collection(s) added to the queue.':'Selected clips are already in the queue.';
+      };
+      renderCollectionManager();
       [...$('momentList').querySelectorAll('[data-preview]')].forEach(button=>button.addEventListener('click',()=>{
         const moment = chosen[Number(button.dataset.preview)];
         applyMoment(moment);
