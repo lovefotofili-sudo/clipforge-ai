@@ -81,7 +81,7 @@ button:hover,.filebtn:hover{filter:brightness(1.12);transform:translateY(-1px)}b
 .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.primary{width:100%;padding:14px;font-size:14px}
 .status{margin-top:15px;padding:11px 12px;border-radius:10px;background:#0b0a11;border:1px solid var(--line);font-size:12px;color:var(--muted);min-height:42px;overflow-wrap:anywhere}
 .status.good{color:var(--good);border-color:#285a48}.status.bad{color:var(--danger);border-color:#633535}
-progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);display:none}
+progress{width:100%;height:9px;margin-top:10px;accent-color:var(--purple);display:none;border-radius:99px;overflow:hidden}#exportProgressText{font-variant-numeric:tabular-nums;color:#d8c8ff;font-weight:750;margin:5px 0 0;min-height:16px}
 .note{margin-top:18px;color:#888397;font-size:11px;line-height:1.6}.foot{margin-top:25px;color:#6f6a7e;font-size:11px;text-align:center}
 @media(max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding:18px 13px 45px}.card{padding:16px}.top{margin-bottom:24px}.preview{max-height:260px}}
 
@@ -320,6 +320,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
         </div>
         <div class="status" id="status" role="status" aria-live="polite">Choose a video to begin.</div>
         <progress id="progress" max="1" value="0" aria-label="Export progress"></progress>
+        <p class="note" id="exportProgressText" aria-live="polite">Export progress will appear here.</p>
         <p class="note" id="exportStage" role="status" aria-live="polite">Ready when you are.</p>
         <div class="actions"><button class="primary" id="export" disabled>Fast export MP4 ↗</button></div>
         <button type="button" id="saveToPhotos" class="filebtn" style="display:none;margin-top:12px;width:100%">▣ Save to Gallery / Photos</button><a id="download" class="filebtn" style="display:none;text-decoration:none;margin-top:10px" download="clipforge-clip.mp4">↓ Download MP4</a><p id="shareHelp" class="note" style="display:none">Choose Photos or Gallery in your phone’s share menu if it is available. If it is not listed, use Download MP4.</p>
@@ -439,7 +440,7 @@ function updateButtons() {
   $('findMoments').disabled = busy || momentScanBusy || !selectedFile || !Number.isFinite(source.duration);
   $('exportNext').disabled = busy || momentQueue.length === 0;
   $('clearQueue').disabled = busy || momentQueue.length === 0;
-  $('export').disabled = busy || !validateTimes();
+  $('export').disabled = busy || !validateTimes(); $('export').textContent = busy ? 'Exporting… please wait' : 'Fast export MP4 ↗';
   $('setStart').disabled = busy || !selectedFile;
   $('setEnd').disabled = busy || !selectedFile;
   $('previewClip').disabled = busy || !selectedFile || !validateTimes();
@@ -1038,7 +1039,9 @@ async function loadEngine() {
     lastProgressPaint = now;
     $('progress').style.display = 'block';
     $('progress').value = Math.max(0, Math.min(1, progress || 0));
-    setStatus(`${ffmpegProgressLabel}… ${Math.round((progress || 0)*100)}%`);
+    const percent = Math.round(Math.max(0, Math.min(1, progress || 0))*100);
+    $('exportProgressText').textContent = `${ffmpegProgressLabel}: ${percent}%`;
+    setStatus(`${ffmpegProgressLabel}… ${percent}%`);
   });
   try {
     await ffmpeg.load({coreURL, wasmURL, classWorkerURL});
@@ -1598,11 +1601,13 @@ $('export').addEventListener('click', async () => {
   catch (error) { setStatus(error.message, 'bad'); return; }
   busy = true; stopClipPreview(); updateButtons();
   $('progress').style.display = 'block'; $('progress').value = 0;
+  $('exportProgressText').textContent = '0% · Preparing export';
   $('exportStage').textContent = 'Step 1 of 4 · Preparing your video';
   $('download').style.display = 'none';
   try {
     const inputBytes = await ensureFileBytes(fileSnapshot);
     $('exportStage').textContent = 'Step 2 of 4 · Loading the video engine';
+    $('exportProgressText').textContent = 'Preparing video engine…';
     await loadEngine();
     $('exportStage').textContent = 'Step 3 of 4 · Preparing your clip';
     setStatus('Preparing your video…');
@@ -1722,6 +1727,7 @@ $('export').addEventListener('click', async () => {
     }
     if (exitCode !== 0) throw new Error('Export failed. Try a shorter video or choose Original video format.');
     $('exportStage').textContent = 'Step 4 of 4 · Finalizing your MP4';
+    $('exportProgressText').textContent = 'Almost done · Finalizing MP4';
     setStatus('Finalizing your MP4…');
     const data = await ffmpeg.readFile(outputName);
     if (outputURL) URL.revokeObjectURL(outputURL);
@@ -1733,6 +1739,7 @@ $('export').addEventListener('click', async () => {
     $('saveToPhotos').style.display = 'block';
     $('shareHelp').style.display = 'block';
     $('progress').value = 1;
+    $('exportProgressText').textContent = '100% · Export complete';
     $('exportStage').textContent = 'Export complete · Your MP4 is ready';
     setStatus(`Finished! Your MP4 is ready (${formatBytes(data.length)}).`, 'good');
     if (activeQueueId !== null && momentQueue[0]?.id === activeQueueId) {
@@ -1744,7 +1751,8 @@ $('export').addEventListener('click', async () => {
     console.error('[CLIPFORGE export error]', err);
     const message = err?.message || String(err);
     $('exportStage').textContent = 'Export stopped · ' + message;
-    setStatus(`Export failed: ${message}. Check your connection, reload the page, and try again.`, 'bad');
+    $('exportProgressText').textContent = 'Export stopped · Your source video and edits are still in this session. You can try again.';
+    setStatus(`Export failed: ${message}. Your current edits are still available; check the error and retry without reloading if possible.`, 'bad');
   } finally {
     busy = false; updateButtons();
   }
