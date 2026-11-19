@@ -204,7 +204,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
             <div><label class="formatlabel" for="aspectRatio">Aspect ratio</label><select id="aspectRatio"><option value="original">Original video</option><option value="9:16" selected>9:16 · TikTok / Shorts / Reels</option><option value="1:1">1:1 · Square</option><option value="16:9">16:9 · Landscape</option><option value="custom">Custom ratio</option></select></div>
             <div><label class="formatlabel">Export size</label><div id="formatSummary" class="timeline-time" style="padding:10px 0">1080 × 1920</div></div>
             <div><label class="formatlabel" for="fitMode">Framing</label><select id="fitMode"><option value="fill" selected>Fill · crop edges</option><option value="fit">Fit · show all</option><option value="stretch">Stretch · distort</option></select></div>
-            <div><label class="formatlabel" for="renderSize">Export speed</label><select id="renderSize"><option value="fast" selected>Fast · 720p</option><option value="hd">HD · 1080p</option></select></div>
+            <div><label class="formatlabel" for="renderSize">Export speed</label><select id="renderSize"><option value="quick" selected>Quick · 540p (mobile)</option><option value="fast">Fast · 720p</option><option value="hd">HD · 1080p</option></select></div>
           </div>
           <div class="customratio" id="customRatio">
             <div><label class="formatlabel" for="customWidth">Width (px)</label><input id="customWidth" type="number" min="144" max="2160" step="2" value="1080" inputmode="numeric"></div>
@@ -254,7 +254,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
       </section>
     </div>
   </main>
-  <div class="foot">CLIPFORGE AI · V2.8.1 · SMART MOMENT FINDER</div>
+  <div class="foot">CLIPFORGE AI · V2.15 · EXPORT BOOST</div>
 </div>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -668,7 +668,9 @@ $('resetFrame').addEventListener('click', () => {
 });
 function getRenderDimensions(dimensions) {
   if (!dimensions) return null;
-  const factor = $('renderSize').value === 'fast' ? 720 / Math.max(dimensions.width, dimensions.height) : 1080 / Math.max(dimensions.width, dimensions.height);
+  const speed = $('renderSize').value;
+  const targetLongEdge = speed === 'quick' ? 540 : speed === 'fast' ? 720 : 1080;
+  const factor = targetLongEdge / Math.max(dimensions.width, dimensions.height);
   return {
     width: Math.max(144, Math.floor(dimensions.width * Math.min(1, factor) / 2) * 2),
     height: Math.max(144, Math.floor(dimensions.height * Math.min(1, factor) / 2) * 2)
@@ -1328,11 +1330,17 @@ $('export').addEventListener('click', async () => {
       }
       exportFilter = drawFilters.join(',');
     }
-    if (dimensions || exportCaptions.length) {
+    const sourceRatio = source.videoWidth && source.videoHeight ? source.videoWidth / source.videoHeight : 0;
+    const targetRatio = dimensions ? dimensions.width / dimensions.height : 0;
+    // If the requested frame already matches the source, avoid a full encode.
+    // Stream-copy keeps original quality and is dramatically faster on phones.
+    const needsTransform = exportCaptions.length > 0 || Boolean(dimensions && Math.abs(sourceRatio - targetRatio) > 0.012);
+    if (needsTransform) {
       let filter = '';
       if (dimensions) {
         const statusDims = getRenderDimensions(dimensions);
-        setStatus(`Exporting ${statusDims.width} × ${statusDims.height} (${ $('renderSize').value === 'fast' ? 'Fast 720p' : 'HD 1080p' }) using ${ $('fitMode').value } framing…`);
+        const speedLabel = $('renderSize').value === 'quick' ? 'Quick 540p' : $('renderSize').value === 'fast' ? 'Fast 720p' : 'HD 1080p';
+        setStatus(`Exporting ${statusDims.width} × ${statusDims.height} (${speedLabel}) using ${ $('fitMode').value } framing…`);
         const cropX = $('frameX').value, cropY = $('frameY').value;
         const renderDims = getRenderDimensions(dimensions);
         const mode = $('fitMode').value;
@@ -1355,7 +1363,9 @@ $('export').addEventListener('click', async () => {
         '-movflags', '+faststart', '-sn', '-dn', outputName
       ]);
     } else {
-      setStatus('Fast export: copying the selected video without re-encoding…');
+      setStatus(dimensions
+        ? 'Source already matches the selected ratio. Fast export is copying the original video without re-encoding…'
+        : 'Fast export: copying the selected video without re-encoding…');
       exitCode = await ffmpeg.exec([
         '-ss', String(start), '-i', inputName, '-t', String(length),
         '-map', '0:v:0', '-map', '0:a?', '-c', 'copy',
