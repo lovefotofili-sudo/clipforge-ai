@@ -291,13 +291,43 @@ async function toBlobURL(url, mimeType, label, onProgress) {
   return URL.createObjectURL(new Blob(chunks, {type:mimeType}));
 }
 let selectedFile = null, selectedFileBytes = null, fileBytesReady = false, fileBytesPromise = null, sourceURL = null, outputURL = null, outputBlob = null;
+async function readFileBytesWithFallback(file) {
+  try {
+    return await file.arrayBuffer();
+  } catch (primaryError) {
+    // Android browsers can occasionally lose access to a picked-file reference.
+    // The existing object URL may still expose the same selected Blob.
+    if (file === selectedFile && sourceURL) {
+      try {
+        const response = await fetch(sourceURL);
+        if (!response.ok) throw new Error('Could not reopen the selected video.');
+        return await response.arrayBuffer();
+      } catch (urlError) {
+        // Last browser-native fallback before asking the user to pick the file again.
+      }
+    }
+    try {
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || primaryError);
+        reader.onabort = () => reject(new Error('Reading the selected video was cancelled.'));
+        reader.readAsArrayBuffer(file);
+      });
+    } catch (readerError) {
+      const error = new Error('Your browser lost access to this video file. Tap “Choose a different file” and select the same video again, then export. Your edits and trim settings should remain available.');
+      error.name = 'NotReadableError';
+      throw error;
+    }
+  }
+}
 async function ensureFileBytes(file = selectedFile) {
   if (!file) throw new Error('Choose a video first.');
   if (fileBytesReady && selectedFileBytes) return selectedFileBytes;
   if (file !== selectedFile) throw new Error('The selected video changed. Choose it again.');
   if (!fileBytesPromise) {
     setStatus('Preparing video for processing…');
-    fileBytesPromise = file.arrayBuffer().then(buffer => {
+    fileBytesPromise = readFileBytesWithFallback(file).then(buffer => {
       if (file !== selectedFile) throw new Error('The selected video changed. Choose it again.');
       selectedFileBytes = new Uint8Array(buffer);
       fileBytesReady = true;
