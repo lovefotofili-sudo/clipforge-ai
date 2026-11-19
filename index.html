@@ -179,7 +179,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.29 · CLIPPING WORKSPACE</span>
+    <span class="badge">V2.30 · CLIPPING WORKSPACE</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -525,6 +525,42 @@ function tryDataUrlFallback(file, attempt) {
   };
   reader.readAsDataURL(file);
 }
+async function primeExportBytes(file, attempt) {
+  if (!file || attempt !== loadAttempt || file !== selectedFile || fileBytesReady) return;
+  try {
+    const buffer = await file.arrayBuffer();
+    if (attempt !== loadAttempt || file !== selectedFile || !buffer.byteLength) return;
+    selectedFileBytes = new Uint8Array(buffer);
+    fileBytesReady = true;
+    fileBytesPromise = Promise.resolve(selectedFileBytes);
+    updateButtons();
+    return;
+  } catch (error) {
+    // Some Android Gallery providers allow preview but reject Blob.arrayBuffer().
+  }
+  try {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('Could not read video data'));
+      reader.onabort = () => reject(new Error('Video read cancelled'));
+      reader.readAsDataURL(file);
+    });
+    if (attempt !== loadAttempt || file !== selectedFile) return;
+    const comma = dataUrl.indexOf(',');
+    if (comma < 0 || !/;base64/i.test(dataUrl.slice(0, comma))) throw new Error('Unsupported local data URL');
+    const binary = atob(dataUrl.slice(comma + 1));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    if (!bytes.length) throw new Error('Empty video data');
+    selectedFileBytes = bytes;
+    fileBytesReady = true;
+    fileBytesPromise = Promise.resolve(selectedFileBytes);
+    updateButtons();
+  } catch (error) {
+    console.warn('[CLIPFORGE] Could not cache video bytes during selection', error);
+  }
+}
 function useFile(file) {
   if (!file) return;
   const ext = (file.name.split('.').pop() || '').toLowerCase();
@@ -546,6 +582,9 @@ function useFile(file) {
   selectedFileBytes = null;
   fileBytesReady = false;
   fileBytesPromise = null;
+  // Prime an export-safe in-memory copy immediately while the Android picker
+  // permission is fresh, instead of waiting until the user presses Export.
+  primeExportBytes(file, attempt);
   $('ytPreview').style.display = 'none';
   $('ytPreview').src = '';
   $('linknotice').style.display = 'none';
