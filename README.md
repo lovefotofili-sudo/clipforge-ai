@@ -17,7 +17,7 @@ CLIPFORGE is a browser-based video clipping tool focused on finding and previewi
 
 ## Important source note
 
-This repository is being prepared as the source-control home for the existing Vercel project. The production site's complete source has not yet been imported into this repository. Do not treat this README as the application source or connect this empty scaffold to production deployments yet.
+This repository now contains the recovered CLIPFORGE application source in `index.html`. The source is based on the current V2.6.0 production build and includes the V2.7.0 source updates. The live production deployment has not yet been changed; test a preview deployment before promoting any release.
 
 ## YouTube links
 
