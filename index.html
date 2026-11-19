@@ -19,6 +19,7 @@ button,.filebtn{border:0;border-radius:11px;background:linear-gradient(110deg,#a
 button:hover,.filebtn:hover{filter:brightness(1.12);transform:translateY(-1px)}button:disabled{opacity:.45;cursor:not-allowed;transform:none;filter:none}
 .secondary{background:#242033;border:1px solid #39334b;color:#e8e0ff}.fileinput{display:none}
 .filemeta{color:var(--muted);font-size:12px;margin-top:12px;overflow-wrap:anywhere}
+.project-dock{margin-top:14px;padding:14px;border:1px solid #594477;border-radius:13px;background:linear-gradient(145deg,#19142a,#100e18)}.project-dock-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.project-help{font-size:10px;line-height:1.5;color:var(--muted);margin:5px 0 0}.project-label{display:block;font-size:11px;color:var(--muted);margin:11px 0 5px}.project-dock input[type=text]{width:100%;background:#0b0a11;border:1px solid #39334b;border-radius:9px;color:white;padding:10px;font:inherit;font-size:12px}.project-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.project-actions button{font-size:11px;padding:9px 8px;min-height:38px}
 .divider{display:flex;align-items:center;gap:10px;color:#777184;font-size:10px;letter-spacing:.14em;margin:15px 0}.divider:before,.divider:after{content:"";height:1px;background:var(--line);flex:1}
 .linkrow{display:flex;gap:8px}.linkrow input{min-width:0;flex:1;background:#0b0a11;border:1px solid #39334b;border-radius:10px;color:white;padding:11px;font:inherit;font-size:13px}.linkhelp{font-size:11px;color:var(--muted);margin:7px 0 0}.ytpreview{width:100%;aspect-ratio:16/9;border:1px solid var(--line);border-radius:13px;margin-top:16px;background:#050508}.linknotice{font-size:11px;color:#d7c9ff;background:#171326;border:1px solid #463565;border-radius:10px;padding:10px;margin-top:10px;line-height:1.55}
 .preview{width:100%;max-height:330px;background:#050508;border-radius:13px;display:block;object-fit:contain;margin-top:16px}
@@ -207,6 +208,14 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
         </div>
         <p class="linkhelp">Use a direct MP4, WebM or MOV file link that you own or have permission to use. The host must allow browser access (CORS). Social-media page links and YouTube links are not direct video files.</p>
         <div class="filemeta" id="filemeta">No video selected yet.</div>
+        <div class="project-dock" id="projectDock">
+          <div class="project-dock-head"><div><div class="smarttitle">▣ CREATOR PROJECT</div><p class="project-help">Save your edit setup as a portable project file. Reopen it later and reselect the original video to continue.</p></div><span class="badge">.CLIPFORGE</span></div>
+          <label class="project-label" for="projectName">Project name</label>
+          <input id="projectName" type="text" maxlength="64" value="Untitled clip project" autocomplete="off">
+          <div class="project-actions"><button type="button" class="secondary" id="saveProject">↓ Save project</button><button type="button" class="secondary" id="loadProject">↑ Open project</button></div>
+          <input id="projectFile" type="file" accept=".clipforge,.json,application/json" hidden>
+          <p class="project-help" id="projectStatus" role="status" aria-live="polite">Project files include trim, captions, export settings and pending clip queue. Original video and music files are not embedded.</p>
+        </div>
         <video id="source" class="preview" controls playsinline preload="metadata" webkit-playsinline style="display:none"></video>
 <div id="subtitleOverlay" class="subtitle-overlay" aria-live="off"></div>
         <div class="timeline" id="timeline" style="display:none"><div class="timeline-top"><span>VIDEO TIMELINE</span><span class="timeline-time" id="timelineTime">0:00 / 0:00</span></div><div class="timeline-scrub-wrap"><div class="timeline-visual-track" aria-hidden="true"><div class="timeline-selected" id="timelineSelected"></div><i class="timeline-marker" id="timelineStartMarker"></i><i class="timeline-marker" id="timelineEndMarker"></i><i class="timeline-playhead" id="timelinePlayhead"></i></div><input id="scrubber" type="range" min="0" max="0" step="0.1" value="0" aria-label="Scrub through video and selected clip"></div><div class="timeline-legend"><span><i></i> Selected clip</span><span><i class="boundary"></i> Trim boundaries</span></div><div class="timeline-jump-actions"><button type="button" class="secondary" id="jumpClipStart">◀ Clip start</button><button type="button" class="secondary" id="jumpClipEnd">Clip end ▶</button></div><div class="timeline-precision-actions"><button type="button" class="secondary" id="stepBack">− 1 frame</button><button type="button" class="secondary" id="stepForward">+ 1 frame</button><button type="button" class="secondary" id="fineBack">− 0.1s</button><button type="button" class="secondary" id="fineForward">+ 0.1s</button></div><div class="timeline-actions"><button type="button" class="secondary" id="backFive">↶ 5 sec</button><button type="button" class="secondary" id="forwardFive">5 sec ↷</button></div><p class="timeline-tap-hint">Tap or drag the timeline to move the playhead.</p></div>
@@ -1789,6 +1798,71 @@ window.addEventListener('resize', updateSubtitleOverlay);
 window.addEventListener('scroll', updateSubtitleOverlay, {passive:true});
 renderSubtitleRows();
 
+// V3.0 Creator Project files: portable edit state, without embedding large media files.
+function projectSnapshot(){
+  const queue=momentQueue.filter(item=>item.status!=='completed'&&item.status!=='exporting').map(item=>({
+    start:Number(item.start),end:Number(item.end),highlightCategory:String(item.highlightCategory||''),varietyType:String(item.varietyType||''),
+    rankScore:Number(item.rankScore)||0,visualSignal:Number(item.visualSignal)||0,collectionLabel:String(item.collectionLabel||'')
+  }));
+  return {
+    format:'clipforge-project',version:1,projectName:String($('projectName').value||'Untitled clip project').trim().slice(0,64),
+    savedAt:new Date().toISOString(),source:{name:selectedFile?.name||'',duration:Number.isFinite(source.duration)?source.duration:null},
+    edit:{start:Number($('start').value)||0,end:Number($('end').value)||0,captions:subtitleItems.map(item=>({start:Number(item.start),end:Number(item.end),text:String(item.text||'').slice(0,240)}))},
+    output:{aspectRatio:$('aspectRatio').value,fitMode:$('fitMode').value,renderSize:$('renderSize').value,customWidth:Number($('customWidth').value)||1080,customHeight:Number($('customHeight').value)||1920,frameX:Number($('frameX').value)||50,frameY:Number($('frameY').value)||50,subtitleAnimation:$('subtitleAnimation').value},
+    audio:{musicStart:Number($('musicStart').value)||0,musicVolume:Number($('musicVolume').value)||35,originalVolume:Number($('originalVolume').value)||100,muteOriginal:$('muteOriginal').checked},
+    queue
+  };
+}
+function saveProjectFile(){
+  const project=projectSnapshot();
+  if(!Number.isFinite(project.edit.start)||!Number.isFinite(project.edit.end)||project.edit.start<0||project.edit.end<=project.edit.start){$('projectStatus').textContent='Set a valid clip range before saving the project.';return;}
+  const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/vnd.clipforge.project+json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=(project.projectName||'clipforge-project').replace(/[^a-z0-9-_ ]/gi,'').trim().replace(/\s+/g,'-').toLowerCase()+'.clipforge';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
+  $('projectStatus').textContent='Project saved. Keep the original video and music files too — they are not embedded in this project file.';
+}
+function restoreProject(project){
+  if(!project||project.format!=='clipforge-project'||project.version!==1||!project.edit||!project.output)throw new Error('This is not a supported CLIPFORGE project file.');
+  const edit=project.edit,output=project.output,audio=project.audio||{};
+  const validNumber=(v,min,max)=>Number.isFinite(Number(v))&&Number(v)>=min&&Number(v)<=max;
+  if(!validNumber(edit.start,0,86400)||!validNumber(edit.end,0,86400)||Number(edit.end)<=Number(edit.start))throw new Error('The project contains an invalid trim range.');
+  const ratios=['original','9:16','1:1','16:9','custom'],fits=['fill','fit','stretch'],sizes=['quick','fast','hd'];
+  if(!ratios.includes(output.aspectRatio)||!fits.includes(output.fitMode)||!sizes.includes(output.renderSize))throw new Error('The project contains unsupported export settings.');
+  const duration=Number.isFinite(source.duration)?source.duration:null;
+  const start=duration===null?Number(edit.start):Math.min(Number(edit.start),Math.max(0,duration-0.1));
+  const end=duration===null?Number(edit.end):Math.min(Number(edit.end),duration);
+  if(end<=start)throw new Error('This project trim does not fit the currently selected video. Choose the original source video, then reopen the project.');
+  $('projectName').value=String(project.projectName||'Untitled clip project').slice(0,64);
+  $('start').value=start.toFixed(1);$('end').value=end.toFixed(1);
+  $('aspectRatio').value=output.aspectRatio;$('fitMode').value=output.fitMode;$('renderSize').value=output.renderSize;
+  $('customWidth').value=validNumber(output.customWidth,144,2160)?Math.round(Number(output.customWidth)/2)*2:1080;
+  $('customHeight').value=validNumber(output.customHeight,144,2160)?Math.round(Number(output.customHeight)/2)*2:1920;
+  $('frameX').value=validNumber(output.frameX,0,100)?output.frameX:50;$('frameY').value=validNumber(output.frameY,0,100)?output.frameY:50;
+  $('subtitleAnimation').value=output.subtitleAnimation==='word'?'word':'static';
+  $('musicStart').value=validNumber(audio.musicStart,0,86400)?audio.musicStart:0;
+  $('musicVolume').value=validNumber(audio.musicVolume,0,100)?audio.musicVolume:35;
+  $('originalVolume').value=validNumber(audio.originalVolume,0,100)?audio.originalVolume:100;
+  $('muteOriginal').checked=!!audio.muteOriginal;
+  subtitleItems=Array.isArray(edit.captions)?edit.captions.slice(0,500).filter(c=>validNumber(c.start,0,86400)&&validNumber(c.end,0,86400)&&Number(c.end)>Number(c.start)).map(c=>({id:++subtitleCounter,start:Number(c.start).toFixed(1),end:Number(c.end).toFixed(1),text:String(c.text||'').slice(0,240)})):[];
+  momentQueue.forEach(item=>{if(item.downloadURL)URL.revokeObjectURL(item.downloadURL);});
+  momentQueue=[];
+  if(Array.isArray(project.queue))project.queue.slice(0,100).forEach(item=>{
+    if(!validNumber(item.start,0,86400)||!validNumber(item.end,0,86400)||Number(item.end)<=Number(item.start))return;
+    momentQueue.push({...item,start:Number(item.start),end:Number(item.end),id:++queueCounter,status:'pending',progress:0,downloadURL:null,downloadBlob:null});
+  });
+  syncTrimControls();updateButtons();updateFormatPreview();renderSubtitleRows();renderMomentQueue();renderMultiTrackTimeline();
+  $('projectStatus').textContent='Project opened. '+momentQueue.length+' queued clip(s) restored. '+(selectedFile?'Your current video is loaded.':'Choose the original video file to preview and export.');
+  $('smartStatus').textContent='Project settings restored. Re-run Best Moment Finder if you want to rebuild highlight collections.';
+}
+$('saveProject').addEventListener('click',saveProjectFile);
+$('loadProject').addEventListener('click',()=>$('projectFile').click());
+$('projectFile').addEventListener('change',async event=>{
+  const file=event.target.files?.[0];event.target.value='';if(!file)return;
+  if(file.size>2*1024*1024){$('projectStatus').textContent='Project file is larger than 2 MB. This project format should remain small.';return;}
+  try{restoreProject(JSON.parse(await file.text()));}
+  catch(error){$('projectStatus').textContent='Could not open project: '+(error?.message||String(error));}
+});
 
 $('saveToPhotos').addEventListener('click', async () => {
   if (!outputBlob) { setStatus('Export a video first, then try Save to Gallery / Photos.', 'bad'); return; }
