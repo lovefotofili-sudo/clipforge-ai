@@ -1,0 +1,1281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#08070d">
+<title>CLIPFORGE AI — Video Cutter</title>
+<style>
+:root{color-scheme:dark;--bg:#08070d;--panel:#11101a;--panel2:#171523;--line:#292538;--muted:#9691a8;--text:#f6f3ff;--purple:#9b6cff;--purple2:#6d3ee8;--good:#79e0b0;--danger:#ff8585}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#241344 0,transparent 45%),var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
+.wrap{max-width:1040px;margin:auto;padding:24px 18px 60px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:30px}
+.brand{display:flex;align-items:center;gap:11px;font-weight:850;letter-spacing:.09em}.logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(140deg,#b78bff,#6833d6);display:grid;place-items:center;box-shadow:0 8px 28px #8a51ff45;font-size:19px}
+.badge{font-size:11px;color:#cbb8ff;border:1px solid #553c82;border-radius:99px;padding:5px 9px;letter-spacing:.08em}
+h1{font-size:clamp(28px,5vw,44px);line-height:1.08;letter-spacing:-.04em;margin:0 0 10px}.grad{background:linear-gradient(90deg,#fff,#b995ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--muted);margin:0 0 26px;max-width:650px}.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}.card{background:linear-gradient(160deg,#151321,#0f0e17);border:1px solid var(--line);border-radius:19px;padding:20px;box-shadow:0 15px 45px #0003}
+.card h2{font-size:16px;margin:0 0 15px}.step{color:#bda4ff;font-size:11px;letter-spacing:.12em;font-weight:800;margin-bottom:5px}
+.drop{border:1px dashed #625080;border-radius:15px;background:#171326;padding:25px 15px;text-align:center;transition:.2s}.drop.drag{border-color:#b995ff;background:#21183a}.drop strong{display:block;font-size:15px;margin-bottom:4px}.drop p{color:var(--muted);font-size:12px;margin:0 0 14px}
+button,.filebtn{border:0;border-radius:11px;background:linear-gradient(110deg,#a77aff,#7443e9);color:white;font-weight:750;padding:11px 16px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .15s,filter .15s}
+button:hover,.filebtn:hover{filter:brightness(1.12);transform:translateY(-1px)}button:disabled{opacity:.45;cursor:not-allowed;transform:none;filter:none}
+.secondary{background:#242033;border:1px solid #39334b;color:#e8e0ff}.fileinput{display:none}
+.filemeta{color:var(--muted);font-size:12px;margin-top:12px;overflow-wrap:anywhere}
+.divider{display:flex;align-items:center;gap:10px;color:#777184;font-size:10px;letter-spacing:.14em;margin:15px 0}.divider:before,.divider:after{content:"";height:1px;background:var(--line);flex:1}
+.linkrow{display:flex;gap:8px}.linkrow input{min-width:0;flex:1;background:#0b0a11;border:1px solid #39334b;border-radius:10px;color:white;padding:11px;font:inherit;font-size:13px}.linkhelp{font-size:11px;color:var(--muted);margin:7px 0 0}.ytpreview{width:100%;aspect-ratio:16/9;border:1px solid var(--line);border-radius:13px;margin-top:16px;background:#050508}.linknotice{font-size:11px;color:#d7c9ff;background:#171326;border:1px solid #463565;border-radius:10px;padding:10px;margin-top:10px;line-height:1.55}
+.preview{width:100%;max-height:330px;background:#050508;border-radius:13px;display:block;object-fit:contain;margin-top:16px}
+.timeline{margin-top:12px;padding:11px 12px;background:#0b0a11;border:1px solid var(--line);border-radius:12px}.timeline-top{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:11px;margin-bottom:7px}.timeline input{width:100%;accent-color:var(--purple);margin:0;touch-action:pan-y}.timeline-actions{display:flex;justify-content:space-between;gap:8px;margin-top:8px}.timeline-actions button{padding:7px 11px;font-size:11px}.timeline-time{font-variant-numeric:tabular-nums;color:#d9cbff}
+.formatbox{margin-top:14px;padding:13px;border:1px solid #463565;border-radius:12px;background:#171326}
+.formatrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
+.formatrow select,.formatrow input{width:100%;background:#0b0a11;border:1px solid #39334b;border-radius:10px;color:white;padding:10px;font:inherit;font-size:12px}
+.formatlabel{display:block;color:var(--muted);font-size:11px;margin-bottom:6px}
+.formatrow.three{grid-template-columns:1fr 1fr}
+.modehint{font-size:10px;color:var(--muted);line-height:1.45;margin:9px 0 0}
+
+.customratio{display:none;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.customratio.show{display:grid}
+.chooseclipbox{margin-top:12px;padding:13px;border:1px solid #463565;border-radius:14px;background:linear-gradient(145deg,#171326,#100e18)}
+.chooseclipbox>.controls{margin-top:0}
+.formatbox{margin-top:14px;padding:14px;border:1px solid #65508a;border-radius:14px;background:linear-gradient(145deg,#1b1727,#100e18)}
+.outputpreviewbtn{width:100%;margin-top:12px}
+.clip-preview-panel{margin-top:14px;padding:13px;border:1px solid #463565;border-radius:12px;background:#171326}
+.clip-preview-panel .previewclipbtn{width:100%;margin-top:10px}
+.preview-help{font-size:11px;line-height:1.45;color:var(--muted);margin:5px 0 0}
+.framing{display:none;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid #39334b}
+.framing.show{display:grid}
+.framehead{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--muted)}
+.framehead output{color:#e5d9ff;font-variant-numeric:tabular-nums}
+.framing input{width:100%;accent-color:#a78bfa}
+
+
+
+/* V1.6 subtitle studio */
+.subtitlebox{margin-top:14px;padding:13px;border:1px solid #463565;border-radius:12px;background:#171326}
+.subtitlehead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.subtitlelist{display:grid;gap:9px;margin-top:10px}
+.subtitle-row{display:grid;grid-template-columns:75px 75px 1fr auto;gap:7px;align-items:center}
+.subtitle-row input{min-width:0;width:100%;background:#0b0a11;border:1px solid #39334b;border-radius:8px;color:white;padding:9px;font:inherit;font-size:12px}
+.subtitle-row button{padding:8px 10px;background:#30253f}
+.subtitle-help{font-size:10px;color:var(--muted);margin:8px 0 0;line-height:1.5}
+.subtitle-overlay{position:fixed;z-index:9999;pointer-events:none;display:none;max-width:min(86vw,720px);padding:5px 10px;border-radius:5px;background:#000b;color:#fff;text-align:center;font-weight:800;font-size:clamp(15px,3.5vw,27px);line-height:1.25;text-shadow:0 2px 3px #000;white-space:pre-wrap;overflow-wrap:anywhere;transform:translateX(-50%)}
+@media(max-width:420px){.subtitle-row{grid-template-columns:1fr 1fr auto}.subtitle-row input[type=text]{grid-column:1/3;grid-row:2}.subtitle-row button{grid-column:3;grid-row:1/3;height:100%}}
+
+.empty{border:1px solid var(--line);border-radius:13px;background:#09080e;color:#777184;min-height:170px;display:grid;place-items:center;text-align:center;padding:20px;font-size:13px}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}.field input{width:100%;background:#0b0a11;border:1px solid #39334b;border-radius:10px;color:white;padding:11px;font:inherit}
+.hint{font-size:11px;color:var(--muted);margin-top:9px}.smartbox{margin-top:14px;padding:13px;border:1px solid #463565;border-radius:12px;background:#171326}.smarttitle{font-size:12px;font-weight:800;color:#d8c8ff;margin-bottom:5px}.smartdesc{font-size:11px;color:var(--muted);margin:0 0 10px}.smartbtn{width:100%}.momentlist{display:grid;gap:8px;margin-top:10px}.moment{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px;background:#0d0b14;border:1px solid var(--line);border-radius:9px;font-size:11px}.moment span{color:#e6dcff}.moment button{padding:7px 10px;font-size:11px;white-space:nowrap}.smartstatus{font-size:11px;color:var(--muted);margin-top:8px;min-height:16px}.duration{font-size:12px;color:#c7b5f5;margin-top:10px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.primary{width:100%;padding:14px;font-size:14px}
+.status{margin-top:15px;padding:11px 12px;border-radius:10px;background:#0b0a11;border:1px solid var(--line);font-size:12px;color:var(--muted);min-height:42px;overflow-wrap:anywhere}
+.status.good{color:var(--good);border-color:#285a48}.status.bad{color:var(--danger);border-color:#633535}
+progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);display:none}
+.note{margin-top:18px;color:#888397;font-size:11px;line-height:1.6}.foot{margin-top:25px;color:#6f6a7e;font-size:11px;text-align:center}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding:18px 13px 45px}.card{padding:16px}.top{margin-bottom:24px}.preview{max-height:260px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
+    <span class="badge">V2.7.0 · SMART HIGHLIGHT FINDER</span>
+  </header>
+  <main>
+    <div class="step">YOUR VIDEO WORKSPACE</div>
+    <h1>Long video in.<br><span class="grad">Perfect clip out.</span></h1>
+    <p class="sub">Find promising moments at different lengths, review the ranked suggestions, then export the clip you want. Your video is processed in this browser.</p>
+    <div class="grid">
+      <section class="card">
+        <div class="step">01 / IMPORT</div><h2>Upload your video</h2>
+        <div class="drop" id="drop">
+          <strong>Drop a video here</strong>
+          <p>Or choose a file from your phone</p>
+          <button type="button" class="filebtn" id="chooseFile">＋ Choose original video file</button>
+          <input class="fileinput" id="file" type="file" accept="video/*,.mp4,.mov,.m4v,.webm,.3gp">
+        </div>
+        <div class="divider">OR PASTE A YOUTUBE LINK</div>
+        <div class="linkrow">
+          <input id="youtubeUrl" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" aria-label="YouTube video link">
+          <button class="secondary" id="loadYoutube">Preview</button>
+        </div>
+        <p class="linkhelp" id="youtubeHelp">YouTube links are preview-only. To use Best Moment Finder and MP4 export, choose the original video file you own or have permission to edit.</p>
+        <div class="divider">OR PASTE A DIRECT VIDEO FILE LINK</div>
+        <div class="linkrow">
+          <input id="videoFileUrl" type="url" inputmode="url" placeholder="https://example.com/my-video.mp4" aria-label="Direct video file URL">
+          <button class="secondary" id="loadVideoUrl" type="button">Load video</button>
+        </div>
+        <p class="linkhelp">Use a direct MP4, WebM or MOV file link that you own or have permission to use. The host must allow browser access (CORS). Social-media page links and YouTube links are not direct video files.</p>
+        <div class="filemeta" id="filemeta">No video selected yet.</div>
+        <video id="source" class="preview" controls playsinline preload="metadata" webkit-playsinline style="display:none"></video>
+<div id="subtitleOverlay" class="subtitle-overlay" aria-live="off"></div>
+        <div class="timeline" id="timeline" style="display:none"><div class="timeline-top"><span>VIDEO TIMELINE</span><span class="timeline-time" id="timelineTime">0:00 / 0:00</span></div><input id="scrubber" type="range" min="0" max="0" step="0.1" value="0" aria-label="Scrub through video"><div class="timeline-actions"><button type="button" class="secondary" id="backFive">↶ 5 sec</button><button type="button" class="secondary" id="forwardFive">5 sec ↷</button></div></div>
+        <iframe id="ytPreview" class="ytpreview" title="YouTube video preview" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="display:none"></iframe>
+        <div class="filemeta" id="ytInfo" style="display:none;margin-top:8px"></div>
+        <div class="empty" id="empty">Your video preview will appear here after upload or YouTube link preview.</div>
+        <div class="linknotice" id="linknotice" style="display:none">YouTube preview only. To edit this video, use a video file you own or have permission to use, then upload that file above. CLIPFORGE cannot download or extract the video from YouTube.</div>
+        <div class="duration" id="duration"></div>
+      </section>
+      <section class="card">
+        <div class="step">02 / TRIM</div><h2>Choose your clip</h2>
+        <div class="chooseclipbox">
+        <div class="controls">
+          <div class="field"><label for="start">Start time (seconds)</label><input id="start" type="number" min="0" step="0.1" value="0" placeholder="e.g. 3" inputmode="decimal"></div>
+          <div class="field"><label for="end">End time (seconds)</label><input id="end" type="number" min="0" step="0.1" value="10" placeholder="e.g. 9" inputmode="decimal"></div>
+        </div>
+        <p class="hint">Enter seconds only (for example, 3 and 9 — no colon). Or pause the preview and use “Set start” or “Set end”.</p>
+        <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Ranks moments using sustained activity, local action bursts, consistency and scene-change checks, with extended clip boundaries to better capture the full action. It still does not understand story or subjects.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div></div>
+        <div class="clip-preview-panel">
+          <div><div class="smarttitle">▶ CLIP PREVIEW</div><p class="preview-help">Preview your selected start and end times here. Output ratio and framing settings are separate below.</p></div>
+          <button type="button" class="secondary previewclipbtn" id="previewClip" disabled>▶ Preview selected clip</button>
+        </div>
+        </div>
+        <div class="formatbox">
+          <div class="smarttitle">▣ OUTPUT FORMAT</div>
+          <div class="formatrow three">
+            <div><label class="formatlabel" for="aspectRatio">Aspect ratio</label><select id="aspectRatio"><option value="original">Original video</option><option value="9:16" selected>9:16 · TikTok / Shorts / Reels</option><option value="1:1">1:1 · Square</option><option value="16:9">16:9 · Landscape</option><option value="custom">Custom ratio</option></select></div>
+            <div><label class="formatlabel">Export size</label><div id="formatSummary" class="timeline-time" style="padding:10px 0">1080 × 1920</div></div>
+            <div><label class="formatlabel" for="fitMode">Framing</label><select id="fitMode"><option value="fill" selected>Fill · crop edges</option><option value="fit">Fit · show all</option><option value="stretch">Stretch · distort</option></select></div>
+            <div><label class="formatlabel" for="renderSize">Export speed</label><select id="renderSize"><option value="fast" selected>Fast · 720p</option><option value="hd">HD · 1080p</option></select></div>
+          </div>
+          <div class="customratio" id="customRatio">
+            <div><label class="formatlabel" for="customWidth">Width (px)</label><input id="customWidth" type="number" min="144" max="2160" step="2" value="1080" inputmode="numeric"></div>
+            <div><label class="formatlabel" for="customHeight">Height (px)</label><input id="customHeight" type="number" min="144" max="2160" step="2" value="1920" inputmode="numeric"></div>
+          </div>
+          <div class="framing" id="framingControls">
+            <div><div class="framehead"><label for="frameX">Horizontal position</label><output id="frameXValue">50%</output></div><input id="frameX" type="range" min="0" max="100" value="50"></div>
+            <div><div class="framehead"><label for="frameY">Vertical position</label><output id="frameYValue">50%</output></div><input id="frameY" type="range" min="0" max="100" value="50"></div>
+            <button type="button" class="secondary" id="resetFrame" style="width:100%">Reset crop position</button>
+          </div>
+          <p class="modehint" id="modeHint">Fill crops to cover the frame. Choose Fit to keep every part of the video, or Stretch to fill the frame with possible distortion. Fast 720p exports are quicker on phones than Full HD.</p>
+          <button type="button" class="secondary outputpreviewbtn" id="previewOutput">▶ Preview output</button>
+        </div>
+
+        
+        
+        <div class="subtitlebox" id="subtitleEditor">
+          <div class="subtitlehead">
+            <div><div class="smarttitle">✎ SUBTITLE STUDIO</div><div class="subtitle-help">Add captions with start/end times in seconds. They appear over the preview and are burned into MP4 exports. SRT export remains available.</div></div>
+            <button type="button" id="addSubtitle">＋ Add caption</button>
+          </div>
+          <div class="field" style="margin-top:12px">
+            <label for="subtitleAnimation">Subtitle animation</label>
+            <select id="subtitleAnimation" style="width:100%;background:#0b0a11;border:1px solid #39334b;border-radius:8px;color:white;padding:10px;font:inherit">
+              <option value="static">Static · wrapped lines</option>
+              <option value="word">Word by word · progressive reveal</option>
+            </select>
+          </div>
+          <div class="subtitlelist" id="subtitleList"></div>
+          <div class="actions" style="margin-top:10px">
+            <button type="button" class="primary" id="autoTranscribe" disabled>✦ Generate automatic subtitles</button>
+            <button type="button" class="secondary" id="downloadSrt" disabled>↓ Export SRT subtitles</button>
+            <button type="button" class="secondary" id="clearSubtitles" disabled>Clear captions</button>
+          </div>
+          <p class="subtitle-help">Automatic transcription runs locally in this browser using Whisper Tiny English. First use downloads a speech model (about 75 MB); processing can be slow or memory-limited on phones. English model only in this release.</p>
+        </div>
+
+        <div class="actions">
+          <button class="secondary" id="setStart" disabled>Set start to preview</button>
+          <button class="secondary" id="setEnd" disabled>Set end to preview</button>
+        </div>
+        <div class="status" id="status" role="status" aria-live="polite">Choose a video to begin.</div>
+        <progress id="progress" max="1" value="0"></progress>
+        <div class="actions"><button class="primary" id="export" disabled>Fast export MP4 ↗</button></div>
+        <a id="download" class="filebtn" style="display:none;text-decoration:none;margin-top:12px" download="clipforge-clip.mp4">↓ Download MP4</a>
+        <p class="note">The first export must download the video engine. Later visits may reuse cached files. Fast export avoids re-encoding when possible; some files may need a slower compatibility conversion. Keep this tab open.</p>
+      </section>
+    </div>
+  </main>
+  <div class="foot">CLIPFORGE AI · V2.7.0 · SMART MOMENT FINDER</div>
+</div>
+<script type="module">
+const $ = id => document.getElementById(id);
+const source = $('source');
+let ffmpeg = null;
+let engineReady = false;
+let busy = false;
+
+async function fetchFile(file) {
+  return new Uint8Array(await file.arrayBuffer());
+}
+async function toBlobURL(url, mimeType, label, onProgress) {
+  const response = await fetch(url, {cache:'force-cache'});
+  if (!response.ok) throw new Error(`Could not load ${label} (${response.status}). Check your internet connection and reload.`);
+  const total = Number(response.headers.get('content-length')) || 0;
+  if (!response.body || !response.body.getReader) {
+    const blob = await response.blob();
+    onProgress?.(blob.size, total || blob.size);
+    return URL.createObjectURL(new Blob([blob], {type:mimeType}));
+  }
+  const reader = response.body.getReader();
+  const chunks = [];
+  let received = 0;
+  while (true) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.byteLength;
+    onProgress?.(received, total);
+  }
+  return URL.createObjectURL(new Blob(chunks, {type:mimeType}));
+}
+let selectedFile = null, selectedFileBytes = null, fileBytesReady = false, sourceURL = null, outputURL = null;
+let metadataTimer = null, fileReaderFallbackTried = false, loadAttempt = 0;
+
+function setStatus(message, kind='') {
+  $('status').textContent = message;
+  $('status').className = 'status' + (kind ? ' '+kind : '');
+}
+function timeValue(value) { return Number.parseFloat(value); }
+function validateTimes() {
+  if (!selectedFile || !Number.isFinite(source.duration)) return false;
+  const start = timeValue($('start').value), end = timeValue($('end').value);
+  return Number.isFinite(start) && Number.isFinite(end) && start >= 0 && end > start && end <= source.duration;
+}
+function updateButtons() {
+  if (typeof enableAutoTranscribe === 'function') enableAutoTranscribe();
+  $('findMoments').disabled = busy || momentScanBusy || !selectedFile || !Number.isFinite(source.duration);
+  $('export').disabled = busy || !fileBytesReady || !validateTimes();
+  $('setStart').disabled = busy || !selectedFile;
+  $('setEnd').disabled = busy || !selectedFile;
+  $('previewClip').disabled = busy || !selectedFile || !validateTimes();
+}
+function formatBytes(bytes) {
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(0)+' KB';
+  return (bytes/1024/1024).toFixed(1)+' MB';
+}
+function clearMediaLoadTimer() {
+  if (metadataTimer) { clearTimeout(metadataTimer); metadataTimer = null; }
+}
+function showLoadedVideo() {
+  clearMediaLoadTimer();
+  const d = source.duration;
+  if (!Number.isFinite(d) || d <= 0) {
+    $('duration').textContent = 'The browser opened the file but could not read its duration.';
+    setStatus('Video preview opened, but its duration could not be read. Try an MP4 (H.264) copy.', 'bad');
+    updateButtons();
+    return;
+  }
+  $('duration').textContent = `Video length: ${d.toFixed(1)} seconds`;
+  $('end').value = Math.min(10, d).toFixed(1);
+  setStatus('Video preview ready. Choose your start and end times.', 'good');
+  updateButtons();
+}
+function tryDataUrlFallback(file, attempt) {
+  if (attempt !== loadAttempt || fileReaderFallbackTried) return;
+  fileReaderFallbackTried = true;
+  setStatus('The browser could not read the local video URL. Trying a compatibility fallback…');
+  const reader = new FileReader();
+  reader.onerror = () => {
+    if (attempt !== loadAttempt) return;
+    clearMediaLoadTimer();
+    setStatus('This browser could not read the selected video. Try opening the page from an HTTPS website, then choose the video again.', 'bad');
+  };
+  reader.onload = () => {
+    if (attempt !== loadAttempt) return;
+    source.src = String(reader.result);
+    source.load();
+    clearMediaLoadTimer();
+    metadataTimer = setTimeout(() => {
+      if (attempt !== loadAttempt || Number.isFinite(source.duration)) return;
+      setStatus('The video file was selected, but Chrome still could not decode its preview. Try an MP4 encoded as H.264, or host this page over HTTPS.', 'bad');
+    }, 12000);
+  };
+  reader.readAsDataURL(file);
+}
+function useFile(file) {
+  if (!file) return;
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const videoExtension = ['mp4','mov','m4v','webm','3gp','mkv','avi','mpeg','mpg'].includes(ext);
+  if (!(file.type && file.type.startsWith('video/')) && !videoExtension) {
+    setStatus('That file does not look like a supported video. Choose an MP4, MOV, WebM or similar video.', 'bad');
+    return;
+  }
+  if (!file.size) {
+    setStatus('The selected file is empty. Choose the video again.', 'bad');
+    return;
+  }
+  const attempt = ++loadAttempt;
+  clearMediaLoadTimer();
+  fileReaderFallbackTried = false;
+  selectedFile = file;
+  $('chooseFile').textContent = '＋ Choose a different file';
+  $('youtubeHelp').textContent = `Selected: ${file.name}. Your original video is ready for Best Moment Finder and MP4 export.`;
+  selectedFileBytes = null;
+  fileBytesReady = false;
+  // Snapshot the phone-selected file immediately, while Android's file permission is fresh.
+  // Export must use these bytes rather than reopening the original File after FFmpeg loads.
+  file.arrayBuffer().then(buffer => {
+    if (attempt !== loadAttempt || selectedFile !== file) return;
+    selectedFileBytes = new Uint8Array(buffer);
+    fileBytesReady = true;
+    if (Number.isFinite(source.duration) && source.duration > 0) {
+      setStatus('Video ready. Choose your trim and export when ready.', 'good');
+    }
+    updateButtons();
+  }).catch(error => {
+    if (attempt !== loadAttempt || selectedFile !== file) return;
+    console.error('[CLIPFORGE file snapshot error]', error);
+    setStatus('Could not prepare this video for export. Please select it again.', 'bad');
+    updateButtons();
+  });
+  $('ytPreview').style.display = 'none';
+  $('ytPreview').src = '';
+  $('linknotice').style.display = 'none';
+  $('youtubeUrl').value = '';
+  if (sourceURL) { URL.revokeObjectURL(sourceURL); sourceURL = null; }
+  if (outputURL) { URL.revokeObjectURL(outputURL); outputURL = null; }
+  $('momentList').innerHTML = ''; $('smartStatus').textContent = 'Ready to scan this video.';
+  $('download').style.display = 'none';
+  source.pause();
+  source.removeAttribute('src');
+  source.load();
+  sourceURL = URL.createObjectURL(file);
+  source.src = sourceURL;
+  source.preload = 'metadata';
+  source.style.display = 'block';
+  $('empty').style.display = 'none';
+  $('filemeta').textContent = `${file.name} · ${formatBytes(file.size)}`;
+  $('duration').textContent = 'Reading video metadata…';
+  $('start').value = '0';
+  $('end').value = '10';
+  setStatus('File selected. Waiting for Chrome to read the video…');
+  source.load();
+  metadataTimer = setTimeout(() => {
+    if (attempt !== loadAttempt || Number.isFinite(source.duration)) return;
+    tryDataUrlFallback(file, attempt);
+  }, 9000);
+  updateButtons();
+}
+source.addEventListener('loadedmetadata', showLoadedVideo);
+source.addEventListener('loadeddata', () => {
+  if (Number.isFinite(source.duration) && source.duration > 0) showLoadedVideo();
+});
+source.addEventListener('error', () => {
+  if (!selectedFile) return;
+  const code = source.error && source.error.code;
+  if (!fileReaderFallbackTried) {
+    tryDataUrlFallback(selectedFile, loadAttempt);
+    return;
+  }
+  clearMediaLoadTimer();
+  const detail = code === 3
+    ? 'Chrome could not decode this video. It may use an unsupported codec.'
+    : code === 4
+      ? 'Chrome does not support this video format or codec.'
+      : 'Chrome could not read the selected video file.';
+  $('duration').textContent = 'Video metadata unavailable.';
+  setStatus(`${detail} Try an MP4 encoded with H.264 video and AAC audio.`, 'bad');
+  updateButtons();
+});
+function formatClock(seconds) {
+  if (!Number.isFinite(seconds)) return '0:00';
+  const whole = Math.max(0, Math.floor(seconds));
+  const mins = Math.floor(whole / 60);
+  const secs = String(whole % 60).padStart(2, '0');
+  return mins + ':' + secs;
+}
+function updateTimeline() {
+  const duration = Number.isFinite(source.duration) ? source.duration : 0;
+  $('scrubber').max = String(duration);
+  if (!$('scrubber').matches(':active')) $('scrubber').value = String(source.currentTime || 0);
+  $('timelineTime').textContent = formatClock(source.currentTime || 0) + ' / ' + formatClock(duration);
+  $('timeline').style.display = selectedFile && duration > 0 ? 'block' : 'none';
+}
+$('scrubber').addEventListener('input', () => {
+  if (selectedFile && Number.isFinite(source.duration)) source.currentTime = Number($('scrubber').value);
+});
+let clipPreviewing = false;
+let clipPreviewToken = 0;
+let clipPreviewWatchTimer = null;
+function stopClipPreview(jumpToEnd = false) {
+  clipPreviewing = false;
+  clipPreviewToken++;
+  if (clipPreviewWatchTimer !== null) {
+    clearInterval(clipPreviewWatchTimer);
+    clipPreviewWatchTimer = null;
+  }
+  source.pause();
+  if (jumpToEnd && Number.isFinite(source.duration)) {
+    const end = timeValue($('end').value);
+    if (Number.isFinite(end)) {
+      try { source.currentTime = Math.min(source.duration, end); } catch {}
+    }
+  }
+  $('previewClip').textContent = '▶ Preview selected clip';
+  $('previewOutput').textContent = '▶ Preview output';
+}
+function checkClipPreviewBoundary() {
+  if (!clipPreviewing) return;
+  const end = timeValue($('end').value);
+  if (Number.isFinite(end) && source.currentTime >= end - 0.015) {
+    stopClipPreview(true);
+  }
+}
+function waitForSeek(video) {
+  if (!video.seeking) return Promise.resolve();
+  return new Promise(resolve => {
+    const done = () => { video.removeEventListener('seeked', done); resolve(); };
+    video.addEventListener('seeked', done, {once:true});
+    setTimeout(done, 1500);
+  });
+}
+$('previewOutput').addEventListener('click', () => $('previewClip').click());
+$('previewClip').addEventListener('click', async () => {
+  if (clipPreviewing) { stopClipPreview(); return; }
+  if (!validateTimes()) return;
+  const token = ++clipPreviewToken;
+  const start = timeValue($('start').value);
+  source.pause();
+  clipPreviewing = true;
+  $('previewClip').textContent = '■ Stop preview';
+  $('previewOutput').textContent = '■ Stop output preview';
+  try {
+    source.currentTime = start;
+    await waitForSeek(source);
+    if (!clipPreviewing || token !== clipPreviewToken) return;
+    await source.play();
+    if (clipPreviewing && token === clipPreviewToken) {
+      if (clipPreviewWatchTimer !== null) clearInterval(clipPreviewWatchTimer);
+      clipPreviewWatchTimer = setInterval(checkClipPreviewBoundary, 25);
+      checkClipPreviewBoundary();
+    }
+  } catch (error) {
+    if (token === clipPreviewToken) {
+      stopClipPreview();
+      setStatus('Could not start preview. Tap the video play control and try again.', 'bad');
+    }
+  }
+});
+source.addEventListener('timeupdate', checkClipPreviewBoundary);
+source.addEventListener('ended', () => {
+  if (clipPreviewing) stopClipPreview(true);
+});
+$('start').addEventListener('input', () => { if (clipPreviewing) stopClipPreview(); updateButtons(); });
+$('end').addEventListener('input', () => { if (clipPreviewing) stopClipPreview(); updateButtons(); });
+
+$('backFive').addEventListener('click', () => {
+  if (selectedFile) source.currentTime = Math.max(0, source.currentTime - 5);
+});
+$('forwardFive').addEventListener('click', () => {
+  if (selectedFile) source.currentTime = Math.min(source.duration || 0, source.currentTime + 5);
+});
+source.addEventListener('timeupdate', () => { updateButtons(); updateTimeline(); });
+source.addEventListener('loadedmetadata', updateTimeline);
+source.addEventListener('durationchange', updateTimeline);
+$('chooseFile').addEventListener('click', () => $('file').click());
+$('file').addEventListener('change', e => {
+  const file = e.target.files && e.target.files[0];
+  if (file) useFile(file);
+  e.target.value = '';
+});
+function getYouTubeId(raw) {
+  try {
+    const url = new URL(raw.trim());
+    const host = url.hostname.toLowerCase().replace(/^www\./, '').replace(/^m\./, '');
+    if (host === 'youtu.be') return url.pathname.split('/').filter(Boolean)[0] || null;
+    if (host !== 'youtube.com' && host !== 'youtube-nocookie.com') return null;
+    if (url.pathname === '/watch') return url.searchParams.get('v');
+    const parts = url.pathname.split('/').filter(Boolean);
+    if (['shorts','embed','live'].includes(parts[0])) return parts[1] || null;
+    return null;
+  } catch { return null; }
+}
+$('loadYoutube').addEventListener('click', () => {
+  const raw = $('youtubeUrl').value.trim();
+  const id = getYouTubeId(raw);
+  if (!id || !/^[A-Za-z0-9_-]{11}$/.test(id)) {
+    setStatus('That does not look like a valid YouTube video link. Paste a standard YouTube or youtu.be link.', 'bad');
+    return;
+  }
+  selectedFile = null;
+  if (sourceURL) { URL.revokeObjectURL(sourceURL); sourceURL = null; }
+  if (outputURL) { URL.revokeObjectURL(outputURL); outputURL = null; }
+  $('download').style.display = 'none';
+  $('source').pause(); $('source').removeAttribute('src'); $('source').load(); $('source').style.display = 'none';
+  if (location.protocol === 'file:' || location.protocol === 'content:') {
+    setStatus('YouTube embeds need a normal HTTPS website address. This local HTML preview has no web referrer, so YouTube may show error 153. The uploaded-file cutter can still be tested here.', 'bad');
+  }
+  $('ytPreview').src = `https://www.youtube-nocookie.com/embed/${id}`;
+  $('ytPreview').style.display = 'block';
+  $('empty').style.display = 'none';
+  $('linknotice').style.display = 'block';
+  $('ytInfo').style.display = 'block';
+  $('ytInfo').textContent = 'Loading public video details…';
+  $('filemeta').textContent = 'YouTube link preview';
+  $('duration').textContent = 'YouTube embed duration is not available to the cutter.';
+  $('start').value = '0'; $('end').value = '10';
+  setStatus('YouTube preview loaded. This link is preview-only; upload the original video file to scan and export.', 'ok');
+  fetch('https://www.youtube.com/oembed?url=' + encodeURIComponent(raw) + '&format=json')
+    .then(response => { if (!response.ok) throw new Error('Details unavailable'); return response.json(); })
+    .then(info => {
+      $('ytInfo').textContent = info.title + ' · ' + info.author_name;
+    })
+    .catch(() => {
+      $('ytInfo').textContent = 'Video preview is available. Public title/channel details could not be loaded.';
+    });
+  updateButtons();
+});
+$('youtubeUrl').addEventListener('keydown', e => { if (e.key === 'Enter') $('loadYoutube').click(); });
+$('videoFileUrl').addEventListener('keydown', e => { if (e.key === 'Enter') $('loadVideoUrl').click(); });
+$('loadVideoUrl').addEventListener('click', async () => {
+  const raw = $('videoFileUrl').value.trim();
+  let url;
+  try { url = new URL(raw); } catch {
+    setStatus('Paste a complete direct video-file URL beginning with https://.', 'bad');
+    return;
+  }
+  if (!['https:','http:'].includes(url.protocol) || url.username || url.password) {
+    setStatus('Use a normal public http:// or https:// video-file link.', 'bad');
+    return;
+  }
+  const button = $('loadVideoUrl');
+  button.disabled = true;
+  $('loadYoutube').disabled = true;
+  setStatus('Connecting to the video link…');
+  try {
+    const response = await fetch(url.href, {mode:'cors', credentials:'omit', redirect:'follow'});
+    if (!response.ok) throw new Error('The video host returned HTTP ' + response.status + '.');
+    const type = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    const pathLooksVideo = /\.(mp4|m4v|mov|webm|3gp|mkv|avi)(?:$|[?#])/i.test(url.pathname);
+    if (!(type.startsWith('video/') || pathLooksVideo)) {
+      throw new Error('That link did not return a recognizable video file. Paste a direct MP4, WebM or MOV file URL, not a webpage link.');
+    }
+    const declaredSize = Number(response.headers.get('content-length')) || 0;
+    const maxBytes = 350 * 1024 * 1024;
+    if (declaredSize > maxBytes) throw new Error('This video is larger than the 350 MB browser-import limit. Use a smaller copy or upload it from your device.');
+    const blob = await response.blob();
+    if (!blob.size) throw new Error('The video link returned an empty file.');
+    if (blob.size > maxBytes) throw new Error('This video is larger than the 350 MB browser-import limit. Use a smaller copy or upload it from your device.');
+    const finalType = blob.type && blob.type.startsWith('video/') ? blob.type : (type.startsWith('video/') ? type : 'video/mp4');
+    const name = decodeURIComponent(url.pathname.split('/').pop() || 'linked-video').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const file = new File([blob], /\.(mp4|m4v|mov|webm|3gp|mkv|avi)$/i.test(name) ? name : name + '.mp4', {type:finalType});
+    $('ytPreview').src = '';
+    $('ytPreview').style.display = 'none';
+    $('linknotice').style.display = 'none';
+    useFile(file);
+    setStatus('Video link loaded into the same editor as an uploaded file. You can scan, preview and export it.');
+  } catch (error) {
+    const message = error && error.message ? error.message : 'Could not load this video link.';
+    const corsHint = /fetch|network|cors|failed/i.test(message) ? ' The host may block browser access (CORS); try uploading the video file instead.' : '';
+    setStatus(message + corsHint, 'bad');
+  } finally {
+    button.disabled = false;
+    $('loadYoutube').disabled = false;
+  }
+});
+$('start').addEventListener('input', updateButtons);
+$('end').addEventListener('input', updateButtons);
+$('setStart').addEventListener('click', () => { $('start').value = $('source').currentTime.toFixed(1); updateButtons(); });
+$('setEnd').addEventListener('click', () => { $('end').value = $('source').currentTime.toFixed(1); updateButtons(); });
+function getOutputDimensions() {
+  const ratio = $('aspectRatio').value;
+  if (ratio === 'original') return null;
+  if (ratio === '9:16') return {width:1080,height:1920,label:'1080 × 1920'};
+  if (ratio === '1:1') return {width:1080,height:1080,label:'1080 × 1080'};
+  if (ratio === '16:9') return {width:1920,height:1080,label:'1920 × 1080'};
+  const width = Math.floor(Number($('customWidth').value) / 2) * 2;
+  const height = Math.floor(Number($('customHeight').value) / 2) * 2;
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width < 144 || height < 144 || width > 2160 || height > 2160) {
+    throw new Error('Custom width and height must each be between 144 and 2160 pixels.');
+  }
+  return {width,height,label:width + ' × ' + height};
+}
+function updateFramePreview() {
+  const x = Number($('frameX').value), y = Number($('frameY').value);
+  $('frameXValue').textContent = x + '%';
+  $('frameYValue').textContent = y + '%';
+  source.style.objectPosition = x + '% ' + y + '%';
+}
+$('frameX').addEventListener('input', updateFramePreview);
+$('frameY').addEventListener('input', updateFramePreview);
+$('resetFrame').addEventListener('click', () => {
+  $('frameX').value = 50; $('frameY').value = 50; updateFramePreview();
+});
+function getRenderDimensions(dimensions) {
+  if (!dimensions) return null;
+  const factor = $('renderSize').value === 'fast' ? 720 / Math.max(dimensions.width, dimensions.height) : 1080 / Math.max(dimensions.width, dimensions.height);
+  return {
+    width: Math.max(144, Math.floor(dimensions.width * Math.min(1, factor) / 2) * 2),
+    height: Math.max(144, Math.floor(dimensions.height * Math.min(1, factor) / 2) * 2)
+  };
+}
+function updateFormatPreview() {
+  const ratio = $('aspectRatio').value;
+  const mode = $('fitMode').value;
+  $('customRatio').classList.toggle('show', ratio === 'custom');
+  $('framingControls').classList.toggle('show', ratio !== 'original' && mode === 'fill');
+  try {
+    const dims = getOutputDimensions();
+    const renderDims = getRenderDimensions(dims);
+    $('formatSummary').textContent = dims ? renderDims.width + ' × ' + renderDims.height : 'Original size';
+    if (ratio === 'original') {
+      source.style.aspectRatio = '';
+      source.style.objectFit = 'contain';
+      source.style.height = '';
+      source.style.objectPosition = '50% 50%';
+      source.style.background = 'transparent';
+    } else {
+      source.style.aspectRatio = dims.width + ' / ' + dims.height;
+      source.style.height = 'min(68vw, 420px)';
+      source.style.background = '#000';
+      source.style.objectFit = mode === 'stretch' ? 'fill' : mode === 'fit' ? 'contain' : 'cover';
+      updateFramePreview();
+    }
+    $('modeHint').textContent = mode === 'fill'
+      ? 'Fill crops the edges to cover the frame. Drag the position sliders to choose what stays visible.'
+      : mode === 'fit'
+        ? 'Fit keeps the entire video visible and adds black space where needed. No image distortion.'
+        : 'Stretch fills every pixel of the frame. It may make people or objects look wider or taller.';
+  } catch {
+    $('formatSummary').textContent = 'Check dimensions';
+  }
+}
+$('aspectRatio').addEventListener('change', updateFormatPreview);
+$('customWidth').addEventListener('input', updateFormatPreview);
+$('customHeight').addEventListener('input', updateFormatPreview);
+$('fitMode').addEventListener('change', updateFormatPreview);
+$('renderSize').addEventListener('change', updateFormatPreview);
+updateFormatPreview();
+
+
+const drop = $('drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('drag'); useFile(e.dataTransfer.files[0]); });
+
+function checkExportEnvironment() {
+  const localHost = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+  if (location.protocol !== 'https:' && !localHost) {
+    throw new Error('MP4 export requires an HTTPS website. This local content:// or file:// preview can select and play videos, but cannot reliably start the FFmpeg worker. The page must be hosted on HTTPS first.');
+  }
+  if (!window.isSecureContext || typeof Worker === 'undefined' || typeof WebAssembly === 'undefined') {
+    throw new Error('This browser context does not support the secure background worker and WebAssembly features required for MP4 export. Open CLIPFORGE from its HTTPS website in an updated browser.');
+  }
+}
+
+async function loadEngine() {
+  if (engineReady) return;
+  // Check the browser context before downloading the large FFmpeg engine.
+  checkExportEnvironment();
+  setStatus('Loading video engine… this first download is large. Keep this page open.');
+  // The FFmpeg class worker must be created from a same-origin/blob worker.
+  // Importing the whole FFmpeg package directly from a CDN breaks worker creation.
+  const { FFmpeg } = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.9/dist/esm/classes.js');
+  ffmpeg = new FFmpeg();
+  const coreBase = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.9/dist/esm';
+  // Show real byte progress while downloading the two large engine assets.
+  // The WASM file is normally the largest part of the first-time load.
+  const assetProgress = {js:0, wasm:0, jsTotal:0, wasmTotal:0};
+  const updateAssetProgress = () => {
+    const loaded = assetProgress.js + assetProgress.wasm;
+    const total = assetProgress.jsTotal + assetProgress.wasmTotal;
+    const pct = total > 0 ? Math.min(99, Math.round(loaded / total * 100)) : 0;
+    setStatus(total > 0
+      ? `Downloading video engine… ${pct}%`
+      : 'Downloading video engine… this may take a little while. Keep Chrome open.');
+    $('progress').style.display = 'block';
+    $('progress').value = total > 0 ? loaded / total : 0;
+  };
+  const [coreURL, wasmURL] = await Promise.all([
+    toBlobURL(`${coreBase}/ffmpeg-core.js`, 'text/javascript', 'FFmpeg core script',
+      (n,t) => { assetProgress.js=n; assetProgress.jsTotal=t; updateAssetProgress(); }),
+    toBlobURL(`${coreBase}/ffmpeg-core.wasm`, 'application/wasm', 'FFmpeg WebAssembly engine',
+      (n,t) => { assetProgress.wasm=n; assetProgress.wasmTotal=t; updateAssetProgress(); })
+  ]);
+  setStatus('Starting video engine…');
+  $('progress').value = 1;
+  const workerCode = 'var u="0.12.9",R=`https://unpkg.com/@ffmpeg/core@${u}/dist/umd/ffmpeg-core.js`,s;(function(t){t.LOAD="LOAD",t.EXEC="EXEC",t.FFPROBE="FFPROBE",t.WRITE_FILE="WRITE_FILE",t.READ_FILE="READ_FILE",t.DELETE_FILE="DELETE_FILE",t.RENAME="RENAME",t.CREATE_DIR="CREATE_DIR",t.LIST_DIR="LIST_DIR",t.DELETE_DIR="DELETE_DIR",t.ERROR="ERROR",t.DOWNLOAD="DOWNLOAD",t.PROGRESS="PROGRESS",t.LOG="LOG",t.MOUNT="MOUNT",t.UNMOUNT="UNMOUNT"})(s||(s={}));var a=new Error("unknown message type"),f=new Error("ffmpeg is not loaded, call `await ffmpeg.load()` first"),F=new Error("called FFmpeg.terminate()"),O=new Error("failed to import ffmpeg-core.js");var r,l=async({coreURL:t,wasmURL:o,workerURL:e})=>{let n=!r;try{t||(t=R),importScripts(t)}catch{if((!t||t===R)&&(t=R.replace("/umd/","/esm/")),self.createFFmpegCore=(await import(t)).default,!self.createFFmpegCore)throw O}let E=t,c=o||t.replace(/.js$/g,".wasm"),m=e||t.replace(/.js$/g,".worker.js");return r=await self.createFFmpegCore({mainScriptUrlOrBlob:`${E}#${btoa(JSON.stringify({wasmURL:c,workerURL:m}))}`}),r.setLogger(i=>self.postMessage({type:s.LOG,data:i})),r.setProgress(i=>self.postMessage({type:s.PROGRESS,data:i})),n},D=({args:t,timeout:o=-1})=>{r.setTimeout(o),r.exec(...t);let e=r.ret;return r.reset(),e},I=({args:t,timeout:o=-1})=>{r.setTimeout(o),r.ffprobe(...t);let e=r.ret;return r.reset(),e},S=({path:t,data:o})=>(r.FS.writeFile(t,o),!0),p=({path:t,encoding:o})=>r.FS.readFile(t,{encoding:o}),L=({path:t})=>(r.FS.unlink(t),!0),A=({oldPath:t,newPath:o})=>(r.FS.rename(t,o),!0),N=({path:t})=>(r.FS.mkdir(t),!0),T=({path:t})=>{let o=r.FS.readdir(t),e=[];for(let n of o){let E=r.FS.stat(`${t}/${n}`),c=r.FS.isDir(E.mode);e.push({name:n,isDir:c})}return e},w=({path:t})=>(r.FS.rmdir(t),!0),k=({fsType:t,options:o,mountPoint:e})=>{let n=t,E=r.FS.filesystems[n];return E?(r.FS.mount(E,o,e),!0):!1},_=({mountPoint:t})=>(r.FS.unmount(t),!0);self.onmessage=async({data:{id:t,type:o,data:e}})=>{let n=[],E;try{if(o!==s.LOAD&&!r)throw f;switch(o){case s.LOAD:E=await l(e);break;case s.EXEC:E=D(e);break;case s.FFPROBE:E=I(e);break;case s.WRITE_FILE:E=S(e);break;case s.READ_FILE:E=p(e);break;case s.DELETE_FILE:E=L(e);break;case s.RENAME:E=A(e);break;case s.CREATE_DIR:E=N(e);break;case s.LIST_DIR:E=T(e);break;case s.DELETE_DIR:E=w(e);break;case s.MOUNT:E=k(e);break;case s.UNMOUNT:E=_(e);break;default:throw a}}catch(c){self.postMessage({id:t,type:s.ERROR,data:c.toString()});return}E instanceof Uint8Array&&n.push(E.buffer),self.postMessage({id:t,type:o,data:E},n)};';
+  const classWorkerURL = URL.createObjectURL(new Blob([workerCode], {type:'text/javascript'}));
+  ffmpeg.on('log', ({message}) => console.log('[CLIPFORGE FFmpeg]', message));
+  let lastProgressPaint = 0;
+  ffmpeg.on('progress', ({progress}) => {
+    const now = performance.now();
+    if (now - lastProgressPaint < 180 && progress < 0.999) return;
+    lastProgressPaint = now;
+    $('progress').style.display = 'block';
+    $('progress').value = Math.max(0, Math.min(1, progress || 0));
+    setStatus(`Exporting… ${Math.round((progress || 0)*100)}%`);
+  });
+  try {
+    await ffmpeg.load({coreURL, wasmURL, classWorkerURL});
+    engineReady = true;
+  } finally {
+    // Release temporary URLs after FFmpeg has initialized (or failed).
+    URL.revokeObjectURL(coreURL);
+    URL.revokeObjectURL(wasmURL);
+    URL.revokeObjectURL(classWorkerURL);
+  }
+}
+
+let momentScanBusy = false;
+function seekForScan(time) {
+  return new Promise((resolve, reject) => {
+    const target = Math.max(0, Math.min(Math.max(0, source.duration - 0.05), time));
+    // Android browsers can report a seek as complete slightly before the
+    // decoded frame is ready. Allow a wider timestamp tolerance, but still
+    // require decoded data before drawing to the analysis canvas.
+    const closeEnough = () => Math.abs(source.currentTime - target) < 0.35 && !source.seeking;
+    if (closeEnough() && source.readyState >= 2) { resolve(); return; }
+    let settled = false, nudged = false, timer = null, poll = null;
+    const cleanup = () => {
+      if (timer !== null) clearTimeout(timer);
+      if (poll !== null) clearInterval(poll);
+      source.removeEventListener('seeked', done);
+      source.removeEventListener('timeupdate', done);
+      source.removeEventListener('loadeddata', done);
+      source.removeEventListener('canplay', done);
+      source.removeEventListener('error', onError);
+    };
+    const finish = () => { if (settled) return; settled = true; cleanup(); resolve(); };
+    const fail = error => { if (settled) return; settled = true; cleanup(); reject(error); };
+    const done = () => { if (closeEnough() && source.readyState >= 2) finish(); };
+    const onError = () => fail(new Error('The browser could not decode this video frame.'));
+    const armTimeout = ms => {
+      if (timer !== null) clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (closeEnough() && source.readyState >= 2) return finish();
+        // A few mobile decoders occasionally drop the first seek event.
+        // Re-issue the same seek once instead of immediately aborting the scan.
+        if (!nudged) {
+          nudged = true;
+          try { source.currentTime = target; armTimeout(10000); }
+          catch (error) { fail(error); }
+          return;
+        }
+        fail(new Error('This video frame is still loading after a retry. Try scanning again after the video has played for a few seconds.'));
+      }, ms);
+    };
+    source.addEventListener('seeked', done);
+    source.addEventListener('timeupdate', done);
+    source.addEventListener('loadeddata', done);
+    source.addEventListener('canplay', done);
+    source.addEventListener('error', onError, {once:true});
+    try {
+      source.currentTime = target;
+      poll = setInterval(done, 100);
+      armTimeout(9000);
+    } catch (error) { fail(error); }
+  });
+}
+async function findBestMoments() {
+  if (!selectedFile || !Number.isFinite(source.duration) || momentScanBusy) return;
+  momentScanBusy = true;
+  $('findMoments').disabled = true;
+  $('momentList').innerHTML = '';
+  $('smartStatus').textContent = 'Analysing sustained activity, action bursts and scene changes… keep this tab open.';
+  const originalTime = source.currentTime;
+  const wasPlaying = !source.paused;
+  source.pause();
+  try {
+    const duration = source.duration;
+    const step = Math.max(0.75, duration / 90);
+    const width = 64, height = 36;
+    const canvas = document.createElement('canvas');
+    canvas.width = width; canvas.height = height;
+    const ctx = canvas.getContext('2d', {willReadFrequently:true});
+    if (!ctx) throw new Error('This browser could not start the video analyser.');
+    const samples = [];
+    let previous = null;
+    for (let t = 0; t < duration - 0.05; t += step) {
+      await seekForScan(t);
+      ctx.drawImage(source, 0, 0, width, height);
+      const rgba = ctx.getImageData(0, 0, width, height).data;
+      const gray = new Float32Array(width * height);
+      let lumSum = 0, rSum = 0, gSum = 0, bSum = 0;
+      for (let p = 0, q = 0; p < rgba.length; p += 4, q++) {
+        const r = rgba[p], g = rgba[p+1], b = rgba[p+2];
+        const y = 0.299*r + 0.587*g + 0.114*b;
+        gray[q] = y; lumSum += y; rSum += r; gSum += g; bSum += b;
+      }
+      const meanLuma = lumSum / gray.length;
+      const meanR = rSum / gray.length, meanG = gSum / gray.length, meanB = bSum / gray.length;
+      let motion = 0, changedCells = 0, cellCount = 0, cut = 0, edgeEnergy = 0;
+      const histogram = new Float32Array(12);
+      for (let p = 0; p < rgba.length; p += 4) {
+        histogram[Math.min(3, rgba[p] >> 6)]++;
+        histogram[4 + Math.min(3, rgba[p+1] >> 6)]++;
+        histogram[8 + Math.min(3, rgba[p+2] >> 6)]++;
+      }
+      for (let k = 0; k < histogram.length; k++) histogram[k] /= gray.length;
+      if (previous) {
+        const cellCols = 6, cellRows = 4;
+        const cellMotion = new Float32Array(cellCols * cellRows);
+        for (let y = 1; y < height - 1; y++) {
+          for (let x = 1; x < width - 1; x++) {
+            const i = y * width + x;
+            const delta = Math.abs(gray[i] - previous.gray[i]);
+            motion += delta;
+            edgeEnergy += Math.abs(gray[i+1] - gray[i-1]) + Math.abs(gray[i+width] - gray[i-width]);
+            const cx = Math.min(cellCols-1, Math.floor(x / width * cellCols));
+            const cy = Math.min(cellRows-1, Math.floor(y / height * cellRows));
+            cellMotion[cy * cellCols + cx] += delta;
+          }
+        }
+        const pixels = (width-2) * (height-2);
+        motion /= pixels;
+        edgeEnergy /= pixels;
+        for (let c = 0; c < cellMotion.length; c++) {
+          const local = cellMotion[c] / (pixels / cellMotion.length);
+          if (local > 5.5) changedCells++;
+          cellCount++;
+        }
+        const lumaShift = Math.abs(meanLuma - previous.meanLuma);
+        const colorShift = (Math.abs(meanR-previous.meanR)+Math.abs(meanG-previous.meanG)+Math.abs(meanB-previous.meanB))/3;
+        const histogramShift = histogram.reduce((sum, value, index) => sum + Math.abs(value - previous.histogram[index]), 0) / 6;
+        cut = Math.min(1, Math.max(Math.max(lumaShift, colorShift) / 38, histogramShift));
+      }
+      samples.push({time:t, motion, coverage:cellCount ? changedCells/cellCount : 0, cut, edgeEnergy});
+      previous = {gray, meanLuma, meanR, meanG, meanB, histogram};
+      if (samples.length % 6 === 0) $('smartStatus').textContent = 'Fast scan… ' + Math.min(99, Math.round(t / duration * 100)) + '%';
+    }
+    if (duration < 2.5 || samples.length < 4) throw new Error('This video is too short to analyse. Try a video at least 3 seconds long.');
+    const candidates = [];
+    const stride = Math.max(0.35, step * 0.7);
+    const mean = arr => arr.reduce((a,b)=>a+b,0)/arr.length;
+    const percentile = (arr,p) => arr[Math.min(arr.length-1,Math.floor((arr.length-1)*p))];
+    // Evaluate several durations so short decisive moments and longer sequences can both rank well.
+    const clipLengths = [3,5,8,12].filter(len => len <= duration);
+    if (!clipLengths.length) clipLengths.push(duration);
+    const frameActivity = x => x.motion*0.55 + x.coverage*13 + Math.min(x.cut,0.6)*3;
+    const globalActivityBaseline = percentile(samples.map(frameActivity).sort((a,b)=>a-b),0.50);
+    for (const clipLength of clipLengths) {
+      for (let start = 0; start + clipLength <= duration + 0.001; start += stride) {
+        const inside = samples.filter(x => x.time >= start && x.time < start + clipLength);
+        if (inside.length < 3) continue;
+        const activities = inside.map(frameActivity);
+        const sortedActivity = [...activities].sort((a,b)=>a-b);
+        const avgActivity = mean(activities);
+        const medianActivity = percentile(sortedActivity,0.50);
+        const sustained = mean(activities.filter(v => v >= percentile(sortedActivity,0.35)));
+        const upperActivity = percentile(sortedActivity,0.90);
+        const peakActivity = percentile(sortedActivity,0.85);
+        const activeRatio = activities.filter(v => v >= Math.max(1.8, medianActivity*1.22)).length / activities.length;
+        const activitySpread = percentile(sortedActivity,0.75) - percentile(sortedActivity,0.25);
+        const sceneEvents = inside.filter(x=>x.cut >= 0.22).length;
+        const visualDetail = mean(inside.map(x=>x.edgeEnergy));
+        // Look for meaningful bursts above each window's own baseline, not just constant motion.
+        let peakCount = 0, peakProminence = 0;
+        for (let j = 1; j < activities.length - 1; j++) {
+          const v = activities[j];
+          if (v >= activities[j-1] && v > activities[j+1] && v > Math.max(1.8, medianActivity*1.25)) {
+            peakCount++;
+            peakProminence += Math.max(0, v - medianActivity);
+          }
+        }
+        const burstProminence = peakCount ? peakProminence / peakCount : Math.max(0, upperActivity - medianActivity)*0.35;
+        const burstDensity = Math.min(1, peakCount / Math.max(2, activities.length*0.18));
+        // Reward sustained action plus distinct bursts; penalise erratic cuts and texture-only noise.
+        const consistency = Math.min(1, activeRatio / 0.58);
+        const burst = Math.min(peakActivity, Math.max(avgActivity*1.9, sustained));
+        const chaosPenalty = Math.max(0, activitySpread - Math.max(1.2, avgActivity*1.55)) * 0.14;
+        const cutPenalty = Math.max(0, sceneEvents - 4) * 0.16;
+        const lowSignalPenalty = avgActivity < 1.1 ? (1.1 - avgActivity)*0.8 : 0;
+        // Prefer windows that rise above this video's own typical activity, not merely busy footage.
+        const relativeLift = Math.max(-1, Math.min(1.5, (avgActivity-globalActivityBaseline)/Math.max(1.5,globalActivityBaseline)));
+        const score = sustained*0.46 + avgActivity*0.10 + burst*0.14 + relativeLift*0.45
+          + Math.min(burstProminence,10)*0.18 + burstDensity*0.55
+          + consistency*1.05 + Math.min(sceneEvents,3)*0.16
+          + Math.min(visualDetail/22,3)*0.20
+          - chaosPenalty - cutPenalty - lowSignalPenalty;
+        // Give the action room to finish: add a little lead-in, then follow activity past
+        // the nominal window until it settles, with a bounded extension for phone performance.
+        // Estimate when the action has actually settled, using both this window and the video's baseline.
+        // A lower adaptive floor avoids treating a brief slowdown as the end of an action.
+        const boundaryFloor = Math.max(1.0, Math.min(medianActivity*0.72, globalActivityBaseline*0.90));
+        let clipStart = Math.max(0, start - Math.min(1.1, step*1.5));
+        let clipEnd = Math.min(duration, start + clipLength + Math.min(0.9, step*1.25));
+        let quietSamples = 0;
+        let lastActiveTime = start + clipLength;
+        const extensionLimit = Math.min(duration, start + clipLength + 4.5);
+        const completionPadding = Math.max(0.65, step*0.65);
+        for (const sample of samples) {
+          if (sample.time < start + clipLength || sample.time > extensionLimit) continue;
+          const activity = frameActivity(sample);
+          if (activity >= boundaryFloor) {
+            lastActiveTime = sample.time;
+            quietSamples = 0;
+          } else {
+            quietSamples++;
+          }
+          // Require a longer quiet stretch so a short pause doesn't prematurely end the clip.
+          if (quietSamples >= 3) break;
+        }
+        clipEnd = Math.max(clipEnd, Math.min(duration, lastActiveTime + completionPadding));
+        candidates.push({start:clipStart,end:Math.max(clipStart+clipLength*0.55,clipEnd),score,clipLength,activeRatio,peakCount});
+      }
+    }
+    candidates.sort((a,b)=>b.score-a.score);
+    const chosen = [];
+    let duplicatesSkipped = 0;
+    for (const c of candidates) {
+      const isDuplicate = chosen.some(x=>{
+        const overlap = Math.max(0,Math.min(c.end,x.end)-Math.max(c.start,x.start));
+        const shorterDuration = Math.max(0.1,Math.min(c.end-c.start,x.end-x.start));
+        const overlapOfShorter = overlap/shorterDuration;
+        const midpointDistance = Math.abs((c.start+c.end)/2-(x.start+x.end)/2);
+        // Reject shifted versions of the same event, while allowing nearby distinct moments.
+        return overlapOfShorter >= 0.72 &&
+          midpointDistance <= Math.max(1.5,shorterDuration*0.30);
+      });
+      if (isDuplicate) { duplicatesSkipped++; continue; }
+      const hasSafeGap = chosen.every(x=>{
+        const minGap = Math.max(2,Math.min(c.clipLength,x.clipLength)*0.35);
+        return c.end+minGap<=x.start || c.start>=x.end+minGap;
+      });
+      if (hasSafeGap) chosen.push(c);
+      if (chosen.length===3) break;
+    }
+    if (!chosen.length || chosen[0].score < 2.2) {
+      $('smartStatus').textContent = 'No strong visual activity was detected. Try another video or set the trim points manually.';
+    } else {
+      $('smartStatus').textContent = 'Done. Ranked by sustained activity and distinct bursts; near-duplicate moments were filtered where possible. Clip endings allow a longer quiet period before treating the action as finished. This is visual analysis, not story understanding.';
+      $('momentList').innerHTML = chosen.map((m,i)=>'<div class="moment"><span>Moment '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(duration,m.end).toFixed(1)+'s</span><button type="button" data-moment="'+i+'">Use this</button></div>').join('');
+      [...$('momentList').querySelectorAll('[data-moment]')].forEach(button=>{
+        button.addEventListener('click',()=>{
+          const m=chosen[Number(button.dataset.moment)];
+          $('start').value=m.start.toFixed(1);
+          $('end').value=Math.min(duration,m.end).toFixed(1);
+          updateButtons();
+          $('smartStatus').textContent='Moment selected. Preview it before exporting.';
+          source.currentTime=m.start;
+        });
+      });
+    }
+  } catch(err) {
+    $('smartStatus').textContent='Scan could not finish: '+(err?.message||String(err));
+  } finally {
+    try { await seekForScan(Math.min(originalTime,Math.max(0,source.duration-0.05))); } catch {}
+    if (wasPlaying) source.play().catch(()=>{});
+    momentScanBusy=false;
+    $('findMoments').disabled=!selectedFile;
+  }
+}
+$('findMoments').addEventListener('click', findBestMoments);
+
+
+/* V1.7 subtitle editor: editable captions + local Whisper transcription + live preview + SRT export */
+let subtitleItems = [];
+let subtitleCounter = 0;
+let subtitleFontBytes = null;
+async function loadSubtitleFont() {
+  if (subtitleFontBytes) return subtitleFontBytes;
+  const url = 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/roboto/Roboto%5Bwdth,wght%5D.ttf';
+  const response = await fetch(url, {cache:'force-cache'});
+  if (!response.ok) throw new Error('Could not load the subtitle font. Check your connection and try again.');
+  subtitleFontBytes = new Uint8Array(await response.arrayBuffer());
+  if (subtitleFontBytes.length < 10000) throw new Error('The subtitle font download was incomplete.');
+  return subtitleFontBytes;
+}
+
+function subtitleTime(seconds) {
+  const ms = Math.max(0, Math.round(Number(seconds) * 1000));
+  const hh = Math.floor(ms / 3600000);
+  const mm = Math.floor((ms % 3600000) / 60000);
+  const ss = Math.floor((ms % 60000) / 1000);
+  const mmm = ms % 1000;
+  return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0') + ':' + String(ss).padStart(2,'0') + ',' + String(mmm).padStart(3,'0');
+}
+function wrapSubtitleText(value, maxChars=30) {
+  const words = String(value || '').replace(/\s+/g,' ').trim().split(' ').filter(Boolean);
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    const candidate = line ? line + ' ' + word : word;
+    if (line && candidate.length > maxChars) { lines.push(line); line = word; }
+    else line = candidate;
+  }
+  if (line) lines.push(line);
+  return lines.join('\n');
+}
+function subtitleTextAtTime(item, now) {
+  const words = String(item.text || '').trim().split(/\s+/).filter(Boolean);
+  if ($('subtitleAnimation')?.value !== 'word' || words.length < 2) return wrapSubtitleText(item.text);
+  const duration = Math.max(0.05, Number(item.end) - Number(item.start));
+  const elapsed = Math.max(0, Math.min(duration, now - Number(item.start)));
+  const visible = Math.max(1, Math.min(words.length, Math.ceil(elapsed / duration * words.length)));
+  return wrapSubtitleText(words.slice(0, visible).join(' '));
+}
+function validSubtitleItems() {
+  return subtitleItems.filter(item => Number.isFinite(Number(item.start)) &&
+    Number.isFinite(Number(item.end)) && Number(item.start) >= 0 &&
+    Number(item.end) > Number(item.start) && item.text.trim());
+}
+function renderSubtitleRows() {
+  const list = $('subtitleList');
+  list.innerHTML = '';
+  subtitleItems.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'subtitle-row';
+    const start = document.createElement('input');
+    start.type = 'number'; start.min = '0'; start.step = '0.1';
+    start.inputMode = 'decimal'; start.setAttribute('aria-label','Caption start time in seconds');
+    start.placeholder = 'Start s'; start.value = item.start;
+    const end = document.createElement('input');
+    end.type = 'number'; end.min = '0'; end.step = '0.1';
+    end.inputMode = 'decimal'; end.setAttribute('aria-label','Caption end time in seconds');
+    end.placeholder = 'End s'; end.value = item.end;
+    const words = document.createElement('input');
+    words.type = 'text'; words.maxLength = 240; words.placeholder = 'Type caption text…';
+    words.setAttribute('aria-label','Caption text'); words.value = item.text;
+    const remove = document.createElement('button');
+    remove.type = 'button'; remove.textContent = '✕'; remove.setAttribute('aria-label','Remove caption');
+    start.addEventListener('input', () => { item.start = start.value; updateSubtitleState(); });
+    end.addEventListener('input', () => { item.end = end.value; updateSubtitleState(); });
+    words.addEventListener('input', () => { item.text = words.value; updateSubtitleState(); });
+    remove.addEventListener('click', () => {
+      subtitleItems = subtitleItems.filter(x => x.id !== item.id);
+      renderSubtitleRows();
+    });
+    row.append(start,end,words,remove);
+    list.appendChild(row);
+  });
+  updateSubtitleState();
+}
+function updateSubtitleState() {
+  const valid = validSubtitleItems();
+  $('downloadSrt').disabled = valid.length === 0;
+  $('clearSubtitles').disabled = subtitleItems.length === 0;
+  updateSubtitleOverlay();
+}
+function updateSubtitleOverlay() {
+  const overlay = $('subtitleOverlay');
+  if (!overlay) return;
+  const now = source.currentTime || 0;
+  const active = validSubtitleItems().find(item => now >= Number(item.start) && now < Number(item.end));
+  const rect = source.getBoundingClientRect();
+  if (!active || source.style.display === 'none' || rect.width < 2 || rect.height < 2) {
+    overlay.style.display = 'none';
+    return;
+  }
+  overlay.textContent = subtitleTextAtTime(active, now);
+  overlay.style.left = (rect.left + rect.width / 2) + 'px';
+  overlay.style.top = (rect.bottom - Math.max(48, rect.height * 0.18)) + 'px';
+  overlay.style.display = 'block';
+}
+
+// V1.7 local speech-to-text. Model assets are fetched only after the user taps the button.
+let whisperPipeline = null;
+let transcriptionBusy = false;
+$('autoTranscribe').disabled = true;
+function enableAutoTranscribe(){ $('autoTranscribe').disabled = !selectedFile || busy || transcriptionBusy; }
+async function audioToMono16k(wavBytes){
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if(!Ctx) throw new Error('Audio decoding is not supported in this browser.');
+  const ctx = new Ctx();
+  try {
+    const decoded = await ctx.decodeAudioData(wavBytes.buffer.slice(wavBytes.byteOffset,wavBytes.byteOffset+wavBytes.byteLength));
+    const length = Math.ceil(decoded.duration*16000);
+    const offline = new OfflineAudioContext(1,length,16000);
+    const src = offline.createBufferSource(); src.buffer=decoded;
+    src.connect(offline.destination); src.start(0);
+    const resampled = await offline.startRendering();
+    return resampled.getChannelData(0);
+  } finally { await ctx.close().catch(()=>{}); }
+}
+$('autoTranscribe').addEventListener('click', async()=>{
+  if(!selectedFile || transcriptionBusy) return;
+  if(!confirm('Generate English subtitles on this device? The first run downloads a speech model (~75 MB). It may be slow or fail on phones with limited memory.')) return;
+  transcriptionBusy=true; enableAutoTranscribe(); $('progress').style.display='block'; $('progress').value=0;
+  try {
+    if(!whisperPipeline){
+      setStatus('Loading local Whisper speech model… first download is about 75 MB. Keep Chrome open.');
+      const {pipeline,env}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2');
+      env.allowLocalModels=false; env.useBrowserCache=true;
+      whisperPipeline=await pipeline('automatic-speech-recognition','onnx-community/whisper-tiny.en',{
+        dtype:'q8', device:'wasm',
+        progress_callback:(p)=>{ if(p.status==='progress' && p.total) { $('progress').value=p.loaded/p.total; setStatus('Downloading speech model… '+Math.round(p.loaded/p.total*100)+'%'); } }
+      });
+    }
+    setStatus('Preparing audio from your video…');
+    await loadEngine();
+    const inputName='clipforge-transcribe-input';
+    const audioName='clipforge-transcribe.wav';
+    await ffmpeg.writeFile(inputName,selectedFileBytes.slice());
+    const result=await ffmpeg.exec(['-i',inputName,'-vn','-ac','1','-ar','16000','-c:a','pcm_s16le',audioName]);
+    if(result!==0) throw new Error('Could not extract audio from this video.');
+    const wav=await ffmpeg.readFile(audioName);
+    setStatus('Converting audio for speech recognition…');
+    const audio=await audioToMono16k(wav);
+    if(!audio.length) throw new Error('No audio track was found in this video.');
+    setStatus('Whisper is transcribing… longer videos can take several minutes on a phone.');
+    const output=await whisperPipeline(audio,{chunk_length_s:30,stride_length_s:5,return_timestamps:true});
+    const chunks=output.chunks||[];
+    const generated=[];
+    for(const c of chunks){
+      const textValue=(c.text||'').trim();
+      const ts=c.timestamp||[];
+      const start=Number(ts[0]), end=Number(ts[1]);
+      if(textValue && Number.isFinite(start) && Number.isFinite(end) && end>start){
+        generated.push({id:++subtitleCounter,start:start.toFixed(2),end:end.toFixed(2),text:textValue.slice(0,240)});
+      }
+    }
+    if(!generated.length && output.text?.trim()){
+      generated.push({id:++subtitleCounter,start:'0.00',end:Math.max(1,Math.min(source.duration||5,5)).toFixed(2),text:output.text.trim().slice(0,240)});
+    }
+    if(!generated.length) throw new Error('No speech segments were detected. Try a clearer English audio track.');
+    subtitleItems=generated; renderSubtitleRows();
+    setStatus('Done — generated '+generated.length+' caption segments. Review timing and wording before exporting SRT.','good');
+    $('progress').value=1;
+  } catch(err) {
+    console.error('[CLIPFORGE transcription]',err);
+    setStatus('Automatic subtitles could not finish: '+(err?.message||String(err))+' You can still add captions manually.','bad');
+  } finally {
+    transcriptionBusy=false; $('progress').style.display='none'; enableAutoTranscribe();
+    try{await ffmpeg?.deleteFile('clipforge-transcribe-input')}catch{}
+    try{await ffmpeg?.deleteFile('clipforge-transcribe.wav')}catch{}
+  }
+});
+
+$('addSubtitle').addEventListener('click', () => {
+  const start = Number.isFinite(source.currentTime) ? source.currentTime : 0;
+  const duration = Number.isFinite(source.duration) ? source.duration : start + 2;
+  const end = Math.min(duration || start + 2, start + 2.5);
+  subtitleItems.push({id:++subtitleCounter,start:start.toFixed(1),end:Math.max(start + 0.2,end).toFixed(1),text:''});
+  renderSubtitleRows();
+});
+$('clearSubtitles').addEventListener('click', () => {
+  subtitleItems = [];
+  renderSubtitleRows();
+});
+$('downloadSrt').addEventListener('click', () => {
+  const valid = validSubtitleItems().sort((a,b) => Number(a.start)-Number(b.start));
+  if (!valid.length) return;
+  const content = valid.map((item,index) =>
+    (index + 1) + '\n' + subtitleTime(item.start) + ' --> ' + subtitleTime(item.end) + '\n' + item.text.trim()
+  ).join('\n\n') + '\n';
+  const url = URL.createObjectURL(new Blob([content],{type:'text/plain;charset=utf-8'}));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'clipforge-subtitles.srt';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+});
+source.addEventListener('timeupdate', updateSubtitleOverlay);
+source.addEventListener('seeked', updateSubtitleOverlay);
+source.addEventListener('loadedmetadata', updateSubtitleOverlay);
+window.addEventListener('resize', updateSubtitleOverlay);
+window.addEventListener('scroll', updateSubtitleOverlay, {passive:true});
+renderSubtitleRows();
+
+
+$('export').addEventListener('click', async () => {
+  if (busy || !validateTimes()) return;
+  const fileSnapshot = selectedFile;
+  const startSnapshot = timeValue($('start').value);
+  const endSnapshot = timeValue($('end').value);
+  const exportCaptions = validSubtitleItems().filter(item => Number(item.end) > startSnapshot && Number(item.start) < endSnapshot).map(item => ({text:item.text.trim(),animation:$('subtitleAnimation').value,start:Math.max(0,Number(item.start)-startSnapshot),end:Math.min(endSnapshot,Number(item.end))-startSnapshot})).filter(item => item.text && item.end > item.start);
+  let dimensions;
+  try { dimensions = getOutputDimensions(); }
+  catch (error) { setStatus(error.message, 'bad'); return; }
+  busy = true; stopClipPreview(); updateButtons();
+  $('progress').style.display = 'block'; $('progress').value = 0;
+  $('download').style.display = 'none';
+  try {
+    await loadEngine();
+    setStatus('Preparing your video…');
+    const ext = (fileSnapshot.name.split('.').pop() || 'mp4').toLowerCase().replace(/[^a-z0-9]/g,'') || 'mp4';
+    const inputName = `input.${ext}`;
+    const outputName = 'clipforge-output.mp4';
+    if (!fileBytesReady || !selectedFileBytes) throw new Error('The selected video is not ready for export yet. Select it again and wait for the video to finish preparing.');
+    await ffmpeg.writeFile(inputName, selectedFileBytes.slice());
+    const start = startSnapshot;
+    const length = endSnapshot - startSnapshot;
+    let exitCode = 1;
+    const subtitleFiles = [];
+    let exportFilter = '';
+    if (exportCaptions.length) {
+      setStatus('Preparing subtitles for MP4 burn-in…');
+      const fontBytes = await loadSubtitleFont();
+      await ffmpeg.writeFile('clipforge-font.ttf', fontBytes.slice());
+      const drawFilters = [];
+      for (let i = 0; i < exportCaptions.length; i++) {
+        const caption = exportCaptions[i];
+        const words = caption.text.split(/\s+/).filter(Boolean);
+        const stages = caption.animation === 'word' && words.length > 1
+          ? words.map((_, index) => words.slice(0, index + 1).join(' '))
+          : [caption.text];
+        const stageDuration = (caption.end - caption.start) / stages.length;
+        for (let j = 0; j < stages.length; j++) {
+          const textName = 'clipforge-caption-' + i + '-' + j + '.txt';
+          await ffmpeg.writeFile(textName, new TextEncoder().encode(wrapSubtitleText(stages[j])));
+          subtitleFiles.push(textName);
+          const a = (caption.start + stageDuration * j).toFixed(3);
+          const b = (j === stages.length - 1 ? caption.end : caption.start + stageDuration * (j + 1)).toFixed(3);
+          drawFilters.push("drawtext=fontfile=clipforge-font.ttf:textfile=" + textName + ":fontcolor=white:fontsize=h*0.035:borderw=2:bordercolor=black:box=1:boxcolor=black@0.55:boxborderw=9:line_spacing=8:x=(w-text_w)/2:y=h-text_h-h*0.07:enable='between(t," + a + "," + b + ")'");
+        }
+      }
+      exportFilter = drawFilters.join(',');
+    }
+    if (dimensions || exportCaptions.length) {
+      let filter = '';
+      if (dimensions) {
+        const statusDims = getRenderDimensions(dimensions);
+        setStatus(`Exporting ${statusDims.width} × ${statusDims.height} (${ $('renderSize').value === 'fast' ? 'Fast 720p' : 'HD 1080p' }) using ${ $('fitMode').value } framing…`);
+        const cropX = $('frameX').value, cropY = $('frameY').value;
+        const renderDims = getRenderDimensions(dimensions);
+        const mode = $('fitMode').value;
+        if (mode === 'stretch') {
+          filter = `scale=${renderDims.width}:${renderDims.height},setsar=1`;
+        } else if (mode === 'fit') {
+          filter = `scale=${renderDims.width}:${renderDims.height}:force_original_aspect_ratio=decrease,pad=${renderDims.width}:${renderDims.height}:(ow-iw)/2:(oh-ih)/2:black,setsar=1`;
+        } else {
+          filter = `scale=${renderDims.width}:${renderDims.height}:force_original_aspect_ratio=increase,crop=${renderDims.width}:${renderDims.height}:(iw-ow)*${cropX}/100:(ih-oh)*${cropY}/100,setsar=1`;
+        }
+      } else {
+        setStatus('Burning ' + exportCaptions.length + ' subtitle segment(s) into the MP4 at original size…');
+      }
+      if (exportFilter) filter = filter ? filter + ',' + exportFilter : exportFilter;
+      exitCode = await ffmpeg.exec([
+        '-ss', String(start), '-i', inputName, '-t', String(length),
+        '-map', '0:v:0', '-map', '0:a?', '-vf', filter,
+        '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23',
+        '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '128k',
+        '-movflags', '+faststart', '-sn', '-dn', outputName
+      ]);
+    } else {
+      setStatus('Fast export: copying the selected video without re-encoding…');
+      exitCode = await ffmpeg.exec([
+        '-ss', String(start), '-i', inputName, '-t', String(length),
+        '-map', '0:v:0', '-map', '0:a?', '-c', 'copy',
+        '-avoid_negative_ts', 'make_zero', '-movflags', '+faststart',
+        '-sn', '-dn', outputName
+      ]);
+      if (exitCode !== 0) {
+        try { await ffmpeg.deleteFile(outputName); } catch {}
+        setStatus('Using compatibility mode… re-encoding this clip will take longer.');
+        exitCode = await ffmpeg.exec([
+          '-ss', String(start), '-i', inputName, '-t', String(length),
+          '-map', '0:v:0', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'ultrafast',
+          '-crf', '23', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '128k',
+          '-movflags', '+faststart', '-sn', '-dn', outputName
+        ]);
+      }
+    }
+    if (exitCode !== 0) throw new Error('Export failed. Try a shorter video or choose Original video format.');
+    const data = await ffmpeg.readFile(outputName);
+    if (outputURL) URL.revokeObjectURL(outputURL);
+    outputURL = URL.createObjectURL(new Blob([data], {type:'video/mp4'}));
+    $('download').href = outputURL;
+    $('download').style.display = 'inline-flex';
+    $('download').download = `clipforge-${Date.now()}.mp4`;
+    setStatus(`Finished! Your MP4 is ready (${formatBytes(data.length)}).`, 'good');
+    try { await ffmpeg.deleteFile(inputName); await ffmpeg.deleteFile(outputName); await ffmpeg.deleteFile('clipforge-font.ttf'); for (const name of subtitleFiles) await ffmpeg.deleteFile(name); } catch {}
+  } catch (err) {
+    console.error('[CLIPFORGE export error]', err);
+    const message = err?.message || String(err);
+    setStatus(`Export failed: ${message}. Check your connection, reload the page, and try again.`, 'bad');
+  } finally {
+    busy = false; updateButtons();
+  }
+});
+
+window.addEventListener('beforeunload', () => {
+  if (sourceURL) URL.revokeObjectURL(sourceURL);
+  if (outputURL) URL.revokeObjectURL(outputURL);
+});
+
+window.addEventListener('error', (event) => {
+  console.error('[CLIPFORGE page error]', event.error || event.message);
+  if ($('status')) setStatus('Page error: ' + (event.message || 'unknown script error') + '. Reload the page and retry.', 'bad');
+});
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[CLIPFORGE async error]', event.reason);
+  if ($('status')) setStatus('Loading error: ' + (event.reason?.message || String(event.reason)) + '. Check internet and reload.', 'bad');
+});
+</script>
+</body>
+</html>
