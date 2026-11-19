@@ -179,7 +179,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.37 · SMART CLIP RANKING UPGRADE</span>
+    <span class="badge">V2.38 · SMART CLIP VARIETY</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -239,7 +239,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
             <button type="button" class="secondary" id="endForward">End +0.1s</button>
           </div>
         </div>
-        <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Ranks moments using a balance of visual activity, sustained footage, stability and useful clip length. Similar moments are filtered; scores are estimates from sampled frames, not semantic understanding.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div><div class="queuebox"><div class="queuehead"><span>CLIP QUEUE</span><span id="queueCount">0 selected</span></div><div id="queueList" class="queueempty">Add suggested moments to build an export queue.</div><div class="queueactions"><button type="button" class="secondary" id="exportNext" disabled>Export all clips</button><button type="button" class="secondary" id="downloadZip" disabled>↓ Download completed ZIP</button><button type="button" class="secondary" id="clearQueue" disabled>Clear queue</button></div><p class="preview-help">Each clip gets a numbered filename with its time range. Download individual MP4s or package completed clips into one ZIP. ZIP creation needs extra free device memory.</p></div></div>
+        <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Ranks moments by visual quality, then selects a more varied set across the video. It balances different activity patterns and time ranges; scores are estimates from sampled frames, not story understanding.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div><div class="queuebox"><div class="queuehead"><span>CLIP QUEUE</span><span id="queueCount">0 selected</span></div><div id="queueList" class="queueempty">Add suggested moments to build an export queue.</div><div class="queueactions"><button type="button" class="secondary" id="exportNext" disabled>Export all clips</button><button type="button" class="secondary" id="downloadZip" disabled>↓ Download completed ZIP</button><button type="button" class="secondary" id="clearQueue" disabled>Clear queue</button></div><p class="preview-help">Each clip gets a numbered filename with its time range. Download individual MP4s or package completed clips into one ZIP. ZIP creation needs extra free device memory.</p></div></div>
         <div class="clip-preview-panel">
           <div><div class="smarttitle">▶ CLIP PREVIEW</div><p class="preview-help">Preview your selected start and end times here. Output ratio and framing settings are separate below.</p></div>
           <button type="button" class="secondary previewclipbtn" id="previewClip" disabled>▶ Preview selected clip</button>
@@ -328,7 +328,7 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
       </section>
     </div>
   </main>
-  <div class="foot">CLIPFORGE AI · V2.37 · SMART CLIP RANKING UPGRADE</div>
+  <div class="foot">CLIPFORGE AI · V2.38 · SMART CLIP VARIETY</div>
 </div>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -1295,34 +1295,50 @@ async function findBestMoments() {
         const suggestedEnd = qualityFlags.includes('May end mid-action') ? Math.min(duration,finalEnd+trimStep) : finalEnd;
         const qualityPenalty = (qualityFlags.includes('Mostly inactive footage')?18:0)+(qualityFlags.includes('Very short clip')?12:0)+(qualityFlags.some(flag=>flag.includes('mid-action'))?6:0);
         const rankScore = Math.max(0,Math.min(100,Math.round(visualSignal*0.35+activeRatio*100*0.20+stabilityScore*0.20+durationScore*0.15+Math.max(0,Math.min(100,50+buildUp*50))*0.10-qualityPenalty)));
-        candidates.push({start:clipStart,end:finalEnd,score,rankScore,stabilityScore,durationScore,activitySpread,clipLength,activeRatio,peakCount,burstDensity,relativeLift,buildUp,visualSignal,sceneEvents,qualityFlags,suggestedStart,suggestedEnd,refined:true});
+        const varietyType = buildUp >= 0.22 ? 'Building action' : peakCount >= 3 ? 'Action bursts' : sceneEvents >= 4 ? 'Scene changes' : activeRatio >= 0.48 ? 'Sustained action' : 'Activity highlight';
+        candidates.push({start:clipStart,end:finalEnd,score,rankScore,stabilityScore,durationScore,activitySpread,clipLength,activeRatio,peakCount,burstDensity,relativeLift,buildUp,visualSignal,sceneEvents,varietyType,qualityFlags,suggestedStart,suggestedEnd,refined:true});
       }
     }
     candidates.sort((a,b)=>b.rankScore-a.rankScore || b.score-a.score);
     const chosen = [];
     let duplicatesSkipped = 0;
-    for (const c of candidates) {
-      const isDuplicate = chosen.some(x=>{
-        const overlap = Math.max(0,Math.min(c.end,x.end)-Math.max(c.start,x.start));
-        const shorterDuration = Math.max(0.1,Math.min(c.end-c.start,x.end-x.start));
-        const overlapOfShorter = overlap/shorterDuration;
-        const midpointDistance = Math.abs((c.start+c.end)/2-(x.start+x.end)/2);
-        // Reject shifted versions of the same event, while allowing nearby distinct moments.
-        return overlapOfShorter >= 0.72 &&
-          midpointDistance <= Math.max(1.5,shorterDuration*0.30);
-      });
-      if (isDuplicate) { duplicatesSkipped++; continue; }
-      const hasSafeGap = chosen.every(x=>{
-        const minGap = Math.max(2,Math.min(c.clipLength,x.clipLength)*0.35);
-        return c.end+minGap<=x.start || c.start>=x.end+minGap;
-      });
-      if (hasSafeGap) chosen.push(c);
-      if (chosen.length===3) break;
+    const midpoint = item => (item.start+item.end)/2;
+    const profileDistance = (a,b) => {
+      const parts = [Math.abs(a.visualSignal-b.visualSignal)/100,Math.abs(a.activeRatio-b.activeRatio),Math.abs(a.stabilityScore-b.stabilityScore)/100,Math.abs(a.buildUp-b.buildUp)/2,Math.abs(a.sceneEvents-b.sceneEvents)/6];
+      return parts.reduce((sum,value)=>sum+value,0)/parts.length;
+    };
+    const isSameEvent = (a,b) => {
+      const overlap = Math.max(0,Math.min(a.end,b.end)-Math.max(a.start,b.start));
+      const shorterDuration = Math.max(0.1,Math.min(a.end-a.start,b.end-b.start));
+      return overlap/shorterDuration >= 0.72 && Math.abs(midpoint(a)-midpoint(b)) <= Math.max(1.5,shorterDuration*0.30);
+    };
+    while(chosen.length<3){
+      let best=null,bestVarietyScore=-Infinity;
+      for(const c of candidates){
+        if(chosen.includes(c))continue;
+        if(chosen.some(x=>isSameEvent(c,x))){duplicatesSkipped++;continue;}
+        const hasSafeGap=chosen.every(x=>{
+          const minGap=Math.max(2,Math.min(c.clipLength,x.clipLength)*0.35);
+          return c.end+minGap<=x.start || c.start>=x.end+minGap;
+        });
+        if(!hasSafeGap)continue;
+        let varietyScore=c.rankScore;
+        if(chosen.length){
+          const timeNovelty=Math.min(1,Math.min(...chosen.map(x=>Math.abs(midpoint(c)-midpoint(x))))/Math.max(1,duration*0.28));
+          const patternNovelty=Math.min(1,Math.min(...chosen.map(x=>profileDistance(c,x)))/0.55);
+          varietyScore=c.rankScore*0.72+timeNovelty*18+patternNovelty*10;
+        }
+        if(varietyScore>bestVarietyScore){best=c;bestVarietyScore=varietyScore;}
+      }
+      if(!best)break;
+      best.varietyScore=Math.round(bestVarietyScore);
+      chosen.push(best);
     }
     if (!chosen.length || chosen[0].score < 2.2) {
       $('smartStatus').textContent = 'No strong visual activity was detected. Try another video or set the trim points manually.';
     } else {
-      $('smartStatus').textContent = 'Done. Ranked with a balanced quality score: visual activity, sustained footage, stability and clip length. Similar moments were filtered. Scores are estimates from sampled frames — preview before exporting.';
+      const varietyCount=new Set(chosen.map(item=>item.varietyType)).size;
+      $('smartStatus').textContent = 'Done. Selected '+chosen.length+' varied moments across the video ('+varietyCount+' activity patterns). Ranking balances clip quality with time and pattern diversity. Estimates use sampled visual signals — preview before exporting.';
       const explainMoment = item => {
         const reasons = [];
         if (item.visualSignal >= 65) reasons.push('strong visual activity');
@@ -1335,11 +1351,11 @@ async function findBestMoments() {
         return reasons.slice(0,3).join(' · ') || 'best balanced visual score in this scan';
       };
       $('momentList').innerHTML = chosen.map((m,i)=>{
-        const rating = m.rankScore;
+        const rating = m.varietyScore ?? m.rankScore;
         const signalLabel = m.visualSignal >= 70 ? 'Strong visual signal' : m.visualSignal >= 42 ? 'Mixed visual signal' : 'Limited visual signal';
         const qcText = m.qualityFlags.length ? '⚠ '+m.qualityFlags.join(' · ') : '✓ No obvious quality issues detected';
         const fixButton = m.qualityFlags.some(flag=>flag.includes('mid-action')) ? '<button type="button" class="secondary" data-qcfix="'+i+'">Apply boundary suggestion</button>' : '';
-        return '<div class="moment"><div class="moment-info"><strong>Moment '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(duration,m.end).toFixed(1)+'s</strong><small>Relative rank '+rating+' · Visual signal '+m.visualSignal+'/100 ('+signalLabel.toLowerCase()+') · Stability '+m.stabilityScore+'/100 · Length fit '+m.durationScore+'/100 · '+explainMoment(m)+'</small><small style="display:block;margin-top:5px;color:'+(m.qualityFlags.length?'#ffd18a':'#79e0b0')+'">'+qcText+'</small></div><div class="moment-actions"><button type="button" class="secondary" data-preview="'+i+'">▶ Preview</button>'+fixButton+'<button type="button" data-queue="'+i+'">＋ Queue</button></div></div>';
+        return '<div class="moment"><div class="moment-info"><strong>Moment '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(duration,m.end).toFixed(1)+'s</strong><small>Relative rank '+rating+' · Visual signal '+m.visualSignal+'/100 ('+signalLabel.toLowerCase()+') · Stability '+m.stabilityScore+'/100 · Length fit '+m.durationScore+'/100 · '+explainMoment(m)+'</small><small style="display:block;margin-top:4px;color:#cbb8ff">Variety: '+m.varietyType+' · Selection score '+(m.varietyScore??m.rankScore)+'</small><small style="display:block;margin-top:5px;color:'+(m.qualityFlags.length?'#ffd18a':'#79e0b0')+'">'+qcText+'</small></div><div class="moment-actions"><button type="button" class="secondary" data-preview="'+i+'">▶ Preview</button>'+fixButton+'<button type="button" data-queue="'+i+'">＋ Queue</button></div></div>';
       }).join('');
       [...$('momentList').querySelectorAll('[data-preview]')].forEach(button=>button.addEventListener('click',()=>{
         const moment = chosen[Number(button.dataset.preview)];
