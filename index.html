@@ -783,10 +783,10 @@ async function loadEngine() {
 }
 
 let momentScanBusy = false;
-function waitForDecodedScanFrame(target, timeoutMs=14000) {
+function waitForDecodedScanFrame(target, timeoutMs=5000) {
   return new Promise((resolve, reject) => {
-    let settled=false, timer=null, poll=null, frameHandle=null;
-    const closeEnough=()=>Math.abs(source.currentTime-target)<0.4 && !source.seeking && source.readyState>=2;
+    let settled=false, timer=null, poll=null;
+    const closeEnough=()=>Math.abs(source.currentTime-target)<0.5 && !source.seeking && source.readyState>=2;
     const cleanup=()=>{
       if(timer!==null) clearTimeout(timer);
       if(poll!==null) clearInterval(poll);
@@ -794,46 +794,33 @@ function waitForDecodedScanFrame(target, timeoutMs=14000) {
       source.removeEventListener('loadeddata',check);
       source.removeEventListener('canplay',check);
       source.removeEventListener('error',onError);
-      if(frameHandle!==null && source.cancelVideoFrameCallback) {
-        try{source.cancelVideoFrameCallback(frameHandle)}catch{}
-      }
     };
     const finish=()=>{if(settled)return;settled=true;cleanup();resolve()};
     const fail=err=>{if(settled)return;settled=true;cleanup();reject(err)};
     const onError=()=>fail(new Error('The browser could not decode this video frame.'));
-    const check=()=>{
-      if(!closeEnough()) return;
-      // requestVideoFrameCallback confirms that the decoder has actually
-      // presented a frame, not merely that the seek event fired.
-      if(source.requestVideoFrameCallback){
-        if(frameHandle!==null)return;
-        frameHandle=source.requestVideoFrameCallback(()=>finish());
-      } else finish();
-    };
+    const check=()=>{if(closeEnough()) finish()};
     source.addEventListener('seeked',check);
     source.addEventListener('loadeddata',check);
     source.addEventListener('canplay',check);
     source.addEventListener('error',onError,{once:true});
-    poll=setInterval(check,120);
-    timer=setTimeout(()=>fail(new Error('Your phone is taking too long to decode this frame. Try a shorter video or let the preview play briefly, then scan again.')),timeoutMs);
+    poll=setInterval(check,80);
+    timer=setTimeout(()=>fail(new Error('Frame decoding timed out. Try a shorter video or play the preview briefly before scanning.')),timeoutMs);
     check();
   });
 }
 async function seekForScan(time) {
   const target=Math.max(0,Math.min(Math.max(0,source.duration-0.05),time));
-  if(Math.abs(source.currentTime-target)<0.4 && !source.seeking && source.readyState>=2) {
-    if(!source.requestVideoFrameCallback)return;
-    await new Promise(resolve=>source.requestVideoFrameCallback(()=>resolve()));
-    return;
-  }
-  // A small offset on retry helps mobile decoders recover from a stalled seek.
+  // A ready frame at the requested position is already drawable. Do not wait
+  // for requestVideoFrameCallback here: while paused it may never fire.
+  if(Math.abs(source.currentTime-target)<0.5 && !source.seeking && source.readyState>=2) return;
   for(let attempt=0;attempt<2;attempt++){
     try{
-      source.currentTime=target+(attempt?0.015:0);
-      await waitForDecodedScanFrame(target+(attempt?0.015:0),attempt?7000:5000);
+      const seekTarget=Math.min(Math.max(0,source.duration-0.05),target+(attempt?0.03:0));
+      source.currentTime=seekTarget;
+      await waitForDecodedScanFrame(seekTarget,attempt?6500:4500);
       return;
     }catch(error){
-      if(attempt===1)throw error;
+      if(attempt===1) throw error;
     }
   }
 }
@@ -907,7 +894,7 @@ async function findBestMoments() {
       }
       samples.push({time:t, motion, coverage:cellCount ? changedCells/cellCount : 0, cut, edgeEnergy});
       previous = {gray, meanLuma, meanR, meanG, meanB, histogram};
-      if (samples.length % 3 === 0) $('smartStatus').textContent = 'Quick scan… ' + Math.min(99, Math.round(t / duration * 100)) + '%';
+      $('smartStatus').textContent = 'Quick scan… ' + Math.min(99, Math.round((samples.length / Math.max(1, Math.ceil(duration / step))) * 100)) + '%';
     }
     if (duration < 2.5 || samples.length < 4) throw new Error('This video is too short to analyse. Try a video at least 3 seconds long.');
     const candidates = [];
