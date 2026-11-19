@@ -68,6 +68,18 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
 .note{margin-top:18px;color:#888397;font-size:11px;line-height:1.6}.foot{margin-top:25px;color:#6f6a7e;font-size:11px;text-align:center}
 @media(max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding:18px 13px 45px}.card{padding:16px}.top{margin-bottom:24px}.preview{max-height:260px}}
 
+
+/* V2.18 — precise mobile trim controls */
+.trimtools{margin-top:12px;padding:12px;border:1px solid #39334b;border-radius:12px;background:#0d0b14}
+.trimtools-head{display:flex;justify-content:space-between;gap:8px;align-items:center;color:#d8c8ff;font-size:11px;font-weight:800;margin-bottom:9px}
+.trimrange{display:grid;grid-template-columns:1fr;gap:9px}
+.trimrange label{display:grid;grid-template-columns:62px 1fr 44px;gap:8px;align-items:center;color:var(--muted);font-size:11px}
+.trimrange input{width:100%;min-width:0;accent-color:var(--purple);touch-action:pan-x}
+.trimrange output{color:#e5d9ff;text-align:right;font-variant-numeric:tabular-nums}
+.trimquick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.trimquick button{min-height:40px;padding:8px;font-size:11px}
+@media(max-width:420px){.trimtools{padding:10px}.trimrange label{grid-template-columns:54px 1fr 40px;gap:6px}}
+
 /* V2.10 — dedicated mobile editor experience */
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 button,.filebtn,input,select,textarea{touch-action:manipulation}
@@ -192,6 +204,21 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
           <div class="field"><label for="end">End time (seconds)</label><input id="end" type="number" min="0" step="0.1" value="10" placeholder="e.g. 9" inputmode="decimal"></div>
         </div>
         <p class="hint">Enter seconds only (for example, 3 and 9 — no colon). Or pause the preview and use “Set start” or “Set end”.</p>
+        <div class="trimtools" id="trimTools">
+          <div class="trimtools-head"><span>PRECISION TRIM</span><span id="trimLength">10.0s selected</span></div>
+          <div class="trimrange">
+            <label for="trimStart"><span>Start</span><input id="trimStart" type="range" min="0" max="10" step="0.1" value="0"><output id="trimStartValue">0.0s</output></label>
+            <label for="trimEnd"><span>End</span><input id="trimEnd" type="range" min="0" max="10" step="0.1" value="10"><output id="trimEndValue">10.0s</output></label>
+          </div>
+          <div class="trimquick">
+            <button type="button" class="secondary" id="setTrimStart">Set start at playhead</button>
+            <button type="button" class="secondary" id="setTrimEnd">Set end at playhead</button>
+            <button type="button" class="secondary" id="startBack">Start −0.1s</button>
+            <button type="button" class="secondary" id="startForward">Start +0.1s</button>
+            <button type="button" class="secondary" id="endBack">End −0.1s</button>
+            <button type="button" class="secondary" id="endForward">End +0.1s</button>
+          </div>
+        </div>
         <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Ranks moments using sustained activity, local action bursts, consistency and scene-change checks, with extended clip boundaries to better capture the full action. It still does not understand story or subjects.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div><div class="queuebox"><div class="queuehead"><span>CLIP QUEUE</span><span id="queueCount">0 selected</span></div><div id="queueList" class="queueempty">Add suggested moments to build an export queue.</div><div class="queueactions"><button type="button" class="secondary" id="exportNext" disabled>Export next clip</button><button type="button" class="secondary" id="clearQueue" disabled>Clear queue</button></div><p class="preview-help">Export clips one at a time to keep memory use lower on phones. Download each MP4 before exporting the next.</p></div></div>
         <div class="clip-preview-panel">
           <div><div class="smarttitle">▶ CLIP PREVIEW</div><p class="preview-help">Preview your selected start and end times here. Output ratio and framing settings are separate below.</p></div>
@@ -559,6 +586,39 @@ source.addEventListener('ended', () => {
 });
 $('start').addEventListener('input', () => { if (clipPreviewing) stopClipPreview(); updateButtons(); });
 $('end').addEventListener('input', () => { if (clipPreviewing) stopClipPreview(); updateButtons(); });
+
+function syncTrimControls(changed) {
+  const duration = Number.isFinite(source.duration) ? source.duration : Math.max(10, Number($('end').value)||10);
+  const start = Math.max(0, Math.min(duration, Number($('start').value)||0));
+  const end = Math.max(0, Math.min(duration, Number($('end').value)||0));
+  $('trimStart').max = String(duration); $('trimEnd').max = String(duration);
+  $('trimStart').value = String(start); $('trimEnd').value = String(end);
+  $('trimStartValue').textContent = start.toFixed(1)+'s';
+  $('trimEndValue').textContent = end.toFixed(1)+'s';
+  $('trimLength').textContent = Math.max(0,end-start).toFixed(1)+'s selected';
+}
+function setTrimPoint(which, value) {
+  const duration = Number.isFinite(source.duration) ? source.duration : 0;
+  const v = Math.max(0,Math.min(duration,Number(value)||0));
+  if (which==='start') $('start').value = Math.min(v,Math.max(0,Number($('end').value)-0.1)).toFixed(1);
+  else $('end').value = Math.max(v,Number($('start').value)+0.1).toFixed(1);
+  if (clipPreviewing) stopClipPreview();
+  syncTrimControls(); updateButtons();
+}
+$('trimStart').addEventListener('input',()=>setTrimPoint('start',$('trimStart').value));
+$('trimEnd').addEventListener('input',()=>setTrimPoint('end',$('trimEnd').value));
+$('setTrimStart').addEventListener('click',()=>setTrimPoint('start',source.currentTime));
+$('setTrimEnd').addEventListener('click',()=>setTrimPoint('end',source.currentTime));
+$('startBack').addEventListener('click',()=>setTrimPoint('start',Number($('start').value)-0.1));
+$('startForward').addEventListener('click',()=>setTrimPoint('start',Number($('start').value)+0.1));
+$('endBack').addEventListener('click',()=>setTrimPoint('end',Number($('end').value)-0.1));
+$('endForward').addEventListener('click',()=>setTrimPoint('end',Number($('end').value)+0.1));
+const originalTrimInputSync = () => syncTrimControls();
+$('start').addEventListener('input',originalTrimInputSync);
+$('end').addEventListener('input',originalTrimInputSync);
+source.addEventListener('loadedmetadata',syncTrimControls);
+source.addEventListener('durationchange',syncTrimControls);
+syncTrimControls();
 
 $('backFive').addEventListener('click', () => {
   if (selectedFile) source.currentTime = Math.max(0, source.currentTime - 5);
