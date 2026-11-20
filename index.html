@@ -174,6 +174,9 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
 
 /* V2.24 multi-track editing workspace */
 .multitrack{margin-top:16px;padding:14px;border:1px solid #463565;border-radius:14px;background:linear-gradient(160deg,#171326,#0e0c15)}.mt-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.mt-title{font-size:13px;font-weight:900;letter-spacing:.06em;color:#e7dcff}.mt-sub{font-size:10px;color:var(--muted);line-height:1.5;margin:5px 0 12px}.mt-controls{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:9px;margin:10px 0}.mt-control{min-width:0;padding:10px;background:#0b0a11;border:1px solid #39334b;border-radius:9px}.mt-control label{display:block;color:#aaa2b9;font-size:10px;margin-bottom:6px}.mt-control input{width:100%;min-width:0}.mt-control input[type=number]{background:#171326;border:1px solid #39334b;border-radius:7px;color:#fff;padding:8px;font:inherit;font-size:12px}.mt-control input[type=range],.mt-check input{accent-color:#a78bfa}.mt-check{display:flex;align-items:center;gap:7px;color:#d8c8ff;font-size:11px;margin-top:9px}.mt-transport{display:flex;align-items:center;gap:10px;margin:10px 0 12px;padding:9px;background:#0b0a11;border:1px solid #39334b;border-radius:10px}.mt-transport button{min-width:112px}.mt-transport-time{margin-left:auto;color:#d8c8ff;font-size:11px;font-variant-numeric:tabular-nums}.mt-lanes{display:grid;gap:8px;margin-top:12px}.mt-lane{display:grid;grid-template-columns:94px minmax(0,1fr);gap:8px;align-items:stretch}.mt-label{display:flex;align-items:center;color:#aaa2b9;font-size:10px;font-weight:800;letter-spacing:.04em}.mt-track{position:relative;min-height:35px;overflow:hidden;border:1px solid #39334b;border-radius:8px;background:repeating-linear-gradient(90deg,#11101a 0,#11101a calc(10% - 1px),#252033 calc(10% - 1px),#252033 10%)}.mt-clip{position:absolute;top:5px;bottom:5px;left:0;width:100%;border-radius:5px;min-width:3px;background:linear-gradient(90deg,#6d4cb4,#a78bfa);border:1px solid #c4a7ff88}.mt-clip.audio{background:linear-gradient(90deg,#176b67,#39c6a5);border-color:#64e5c5aa}.mt-clip.music{background:linear-gradient(90deg,#8b5a20,#f0b65c);border-color:#ffd18aaa}.mt-clip.caption{background:linear-gradient(90deg,#3e579c,#7da5ff);border-color:#9ebaffaa}.mt-empty{position:absolute;inset:0;display:flex;align-items:center;padding:0 9px;color:#6f687e;font-size:10px}.mt-clip-label{position:absolute;inset:0;display:flex;align-items:center;padding:0 7px;color:#fff;font-size:9px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mt-foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;color:#827b91;font-size:10px;margin-top:9px}.mt-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.mt-actions button{flex:1;min-width:125px}.mt-hidden{display:none!important}@media(max-width:520px){.mt-controls{grid-template-columns:1fr 1fr}.mt-control:first-child{grid-column:1/-1}.mt-lane{grid-template-columns:72px minmax(0,1fr);gap:6px}.mt-label{font-size:9px}.multitrack{padding:11px}.mt-actions button{min-width:100%}}
+
+/* V3.1 Batch Production Studio */
+.batch-studio{margin-top:14px;padding:15px;border:1px solid #7255a0;border-radius:15px;background:linear-gradient(145deg,#201735,#100e18);box-shadow:0 12px 30px #0002}.batch-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.batch-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:13px 0}.batch-option{display:flex;align-items:center;gap:9px;padding:10px;border:1px solid #39334b;border-radius:10px;background:#0b0a11;cursor:pointer}.batch-option input{width:17px;height:17px;accent-color:#a78bfa;flex:0 0 auto}.batch-option span{display:grid;gap:2px}.batch-option strong{font-size:12px;color:#e9ddff}.batch-option small{font-size:10px;color:var(--muted)}.batch-summary{padding:9px 10px;background:#0b0a11;border:1px solid #39334b;border-radius:9px;color:#d8c8ff;font-size:11px;font-variant-numeric:tabular-nums}.batch-run{width:100%;margin-top:10px}.batch-studio .preview-help{margin-top:9px}.batch-status-line{color:#d8c8ff}.queue-profile{display:inline-block;color:#d9c8ff;border:1px solid #51406d;border-radius:5px;padding:1px 5px;font-size:9px;margin-top:3px}@media(max-width:420px){.batch-studio{padding:12px}.batch-options{gap:6px}.batch-option{padding:9px 7px}}
 </style>
 </head>
 <body>
@@ -249,7 +252,21 @@ button:focus-visible,.filebtn:focus-visible,input:focus-visible,select:focus-vis
           </div>
         </div>
         <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT FINDER · BETA</div><p class="smartdesc">Finds different highlight types — action bursts, scene changes, building momentum and sustained activity. Filter the suggestions by category; labels are inferred from sampled visual signals, not story understanding.</p><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div id="categoryFilters" style="display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 4px"></div><div class="momentlist" id="momentList"></div><div class="collectionsbox" id="clipCollections" style="display:none;margin-top:14px;padding:13px;border:1px solid #463565;border-radius:12px;background:#100e18"><div class="smarttitle">SMART COLLECTION MANAGER</div><p class="smartdesc">Choose exactly which detected clips you want. Selections can span multiple collections before you queue them together.</p><div id="collectionSummary" class="collection-summary" aria-live="polite"></div><div class="collection-toolbar"><button type="button" class="secondary" id="selectAllCollectionClips">Select all</button><button type="button" class="secondary" id="clearCollectionSelection">Clear selection</button><button type="button" id="queueSelectedCollections">＋ Queue selected clips</button></div><div id="collectionList" class="momentlist"></div></div><div class="queuebox"><div class="queuehead"><span>CLIP QUEUE</span><span id="queueCount">0 selected</span></div><div id="queueList" class="queueempty">Add suggested moments to build an export queue.</div><div class="queueactions"><button type="button" class="secondary" id="exportNext" disabled>Export all clips</button><button type="button" class="secondary" id="downloadZip" disabled>↓ Download completed ZIP</button><button type="button" class="secondary" id="clearQueue" disabled>Clear queue</button></div><p class="preview-help">Each clip gets a numbered filename with its time range. Download individual MP4s or package completed clips into one ZIP. ZIP creation needs extra free device memory.</p></div></div>
-        <div class="clip-preview-panel">
+        <div class="batch-studio" id="batchStudio">
+  <div class="step">V3.1 / BATCH PRODUCTION</div>
+  <div class="batch-head"><div><div class="smarttitle">▣ BATCH PRODUCTION STUDIO</div><p class="preview-help">Turn every waiting clip into multiple platform-ready exports. Each version gets its own format profile and filename.</p></div><span class="badge">V3.1</span></div>
+  <div class="batch-options">
+    <label class="batch-option"><input type="checkbox" class="batch-ratio" value="9:16" checked><span><strong>9:16</strong><small>TikTok · Reels · Shorts</small></span></label>
+    <label class="batch-option"><input type="checkbox" class="batch-ratio" value="1:1"><span><strong>1:1</strong><small>Square posts</small></span></label>
+    <label class="batch-option"><input type="checkbox" class="batch-ratio" value="16:9"><span><strong>16:9</strong><small>YouTube · Landscape</small></span></label>
+    <label class="batch-option"><input type="checkbox" class="batch-ratio" value="original"><span><strong>Original</strong><small>Keep source ratio</small></span></label>
+  </div>
+  <div class="batch-summary" id="batchSummary">Choose formats to see the production size.</div>
+  <button type="button" class="primary batch-run" id="runBatch" disabled>✦ Build batch & export</button>
+  <p class="preview-help">Batch exports use your current framing, render quality, captions and audio mix. Jobs run one at a time to reduce mobile memory pressure. Completed clips are kept; waiting/failed queue items are converted into the selected versions.</p>
+  <div class="smartstatus" id="batchStatus" aria-live="polite">Add clips to your queue, then choose output formats.</div>
+</div>
+<div class="clip-preview-panel">
           <div><div class="smarttitle">▶ CLIP PREVIEW</div><p class="preview-help">Preview your selected start and end times here. Output ratio and framing settings are separate below.</p></div>
           <button type="button" class="secondary previewclipbtn" id="previewClip" disabled>▶ Preview selected clip</button>
         </div>
@@ -1493,7 +1510,8 @@ function clipTimeLabel(seconds) {
   return String(Math.floor(total/60)).padStart(2,'0')+'m'+String(total%60).padStart(2,'0')+'s';
 }
 function makeClipFilename(item,index) {
-  return 'clipforge-clip-'+String(index+1).padStart(2,'0')+'_'+clipTimeLabel(item.start)+'-'+clipTimeLabel(Math.min(source.duration||item.end,item.end))+'.mp4';
+  const profile=item.outputAspectRatio?'_'+String(item.outputAspectRatio).replace(':x','-').replace(':','-'):'';
+  return 'clipforge-clip-'+String(index+1).padStart(2,'0')+profile+'_'+clipTimeLabel(item.start)+'-'+clipTimeLabel(Math.min(source.duration||item.end,item.end))+'.mp4';
 }
 function zipCrc32(bytes) {
   let crc=0xffffffff;
@@ -1537,11 +1555,12 @@ function renderMomentQueue() {
   list.className='';
   list.innerHTML = momentQueue.map((m,i)=>{
     const state=m.status==='completed'?'✓ Complete':m.status==='failed'?'Failed · retry available':m.status==='exporting'?'Exporting · '+(m.progress||0)+'%':'Waiting';
+    const profile=m.outputAspectRatio?'<br><span class="queue-profile">'+m.outputAspectRatio+' · '+(m.outputFitMode||'fill')+'</span>':'';
     const download=m.status==='completed'&&m.downloadURL?'<a class="filebtn" style="padding:6px 9px;font-size:10px;text-decoration:none" href="'+m.downloadURL+'" download="'+makeClipFilename(m,i)+'">↓ MP4</a>':'';
     const retry=m.status==='failed'?'<button type="button" class="secondary" data-retry="'+i+'">Retry</button>':'';
     const reorder=m.status==='pending'?'<button type="button" class="secondary" data-up="'+i+'" '+(i===0?'disabled':'')+'>↑</button> <button type="button" class="secondary" data-down="'+i+'" '+(i===momentQueue.length-1?'disabled':'')+'>↓</button>':'';
     const remove=m.status!=='exporting'?'<button type="button" class="secondary" data-remove="'+i+'">✕</button>':'';
-    return '<div class="queueitem"><span>Clip '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(source.duration,m.end).toFixed(1)+'s<br><small>'+(m.collectionLabel?m.collectionLabel+' · ':'')+state+'</small></span><span>'+download+' '+retry+' '+reorder+' '+remove+'</span></div>';
+    return '<div class="queueitem"><span>Clip '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(source.duration,m.end).toFixed(1)+'s<br><small>'+(m.collectionLabel?m.collectionLabel+' · ':'')+state+'</small>'+profile+'</span><span>'+download+' '+retry+' '+reorder+' '+remove+'</span></div>';
   }).join('');
   list.querySelectorAll('[data-up]').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.up);if(i>0){[momentQueue[i-1],momentQueue[i]]=[momentQueue[i],momentQueue[i-1]];renderMomentQueue();}}));
   list.querySelectorAll('[data-down]').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.down);if(i<momentQueue.length-1){[momentQueue[i+1],momentQueue[i]]=[momentQueue[i],momentQueue[i+1]];renderMomentQueue();}}));
@@ -1552,6 +1571,14 @@ function renderMomentQueue() {
 function startQueuedExport(item) {
   if(!item||busy||!fileBytesReady)return;
   item.status='exporting';
+  if(item.outputAspectRatio){
+    $('aspectRatio').value=item.outputAspectRatio;
+    $('fitMode').value=item.outputFitMode||$('fitMode').value;
+    $('renderSize').value=item.outputRenderSize||$('renderSize').value;
+    if(item.outputFrameX!==undefined)$('frameX').value=item.outputFrameX;
+    if(item.outputFrameY!==undefined)$('frameY').value=item.outputFrameY;
+    $('aspectRatio').dispatchEvent(new Event('change',{bubbles:true}));
+  }
   applyMoment(item);
   activeQueueId=item.id;
   renderMomentQueue();
@@ -1592,6 +1619,38 @@ $('exportNext').addEventListener('click',()=>{
   queueAutoRun=true;
   startNextQueuedExport();
 });
+
+function updateBatchStudio(){
+  const ratios=[...document.querySelectorAll('.batch-ratio:checked')].map(input=>input.value);
+  const eligible=momentQueue.filter(item=>item.status==='pending'||item.status==='failed');
+  const jobs=eligible.length*ratios.length;
+  $('batchSummary').textContent=eligible.length+' waiting clip(s) × '+ratios.length+' format(s) = '+jobs+' export job(s).';
+  $('runBatch').disabled=busy||!fileBytesReady||eligible.length===0||ratios.length===0||jobs>60;
+  if(jobs>60)$('batchStatus').textContent='This batch exceeds 60 jobs. Reduce the number of clips or formats.';
+}
+document.querySelectorAll('.batch-ratio').forEach(input=>input.addEventListener('change',updateBatchStudio));
+$('runBatch').addEventListener('click',()=>{
+  if(busy||!fileBytesReady)return;
+  const ratios=[...document.querySelectorAll('.batch-ratio:checked')].map(input=>input.value);
+  const eligible=momentQueue.filter(item=>item.status==='pending'||item.status==='failed');
+  const jobs=eligible.length*ratios.length;
+  if(!ratios.length||!eligible.length||jobs>60){updateBatchStudio();return;}
+  const fit=$('fitMode').value,size=$('renderSize').value,frameX=Number($('frameX').value)||50,frameY=Number($('frameY').value)||50;
+  const completed=momentQueue.filter(item=>item.status==='completed');
+  const created=[];
+  eligible.forEach(item=>ratios.forEach(ratio=>{
+    created.push({...item,id:++queueCounter,status:'pending',progress:0,downloadURL:null,downloadBlob:null,
+      outputAspectRatio:ratio,outputFitMode:fit,outputRenderSize:size,outputFrameX:frameX,outputFrameY:frameY,
+      collectionLabel:(item.collectionLabel?item.collectionLabel+' · ':'')+ratio+' batch'});
+  }));
+  momentQueue=[...completed,...created];
+  queueAutoRun=true;queueContinuePending=false;
+  renderMomentQueue();updateBatchStudio();
+  $('batchStatus').textContent='Batch created: '+created.length+' exports. Processing one at a time…';
+  $('smartStatus').textContent='Batch production running · '+created.length+' export jobs.';
+  startNextQueuedExport();
+});
+updateBatchStudio();
 
 /* V1.7 subtitle editor: editable captions + local Whisper transcription + live preview + SRT export */
 let subtitleItems = [];
