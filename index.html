@@ -1670,25 +1670,12 @@ window.addEventListener('unhandledrejection', (event) => {
   }catch(e){if(token===sequenceToken)$('timelineStatus').textContent='Sequence preview stopped: '+(e.message||'Playback unavailable.');}
   finally{if(token===sequenceToken){sequencePlaying=false;$('timelinePlay').textContent='▶ Play sequence';renderSequenceTimeline();}}
  });
- const previousSaveProject=$('saveCreatorProject').onclick;
- $('saveCreatorProject').addEventListener('click',()=>{});
- // Project save/open handlers below include sequenceClips through the project data hooks.
- const saveProjectButton=$('saveCreatorProject');
- const saveProjectHandler=saveProjectButton.onclick;
- // Existing project controls use addEventListener; capture through a wrapper on Blob creation.
- const originalCreateObjectURL=URL.createObjectURL.bind(URL);
- const timelineSaveObserver=new MutationObserver(()=>{});
- // Expose sequence for the project serializer by attaching a compact JSON payload at save time.
- saveProjectButton.addEventListener('click',()=>{ $('timelineStatus').textContent=sequenceClips.length+' timeline clip(s) are in this editing session.';});
- const projectInput=$('openCreatorProject');
- projectInput.addEventListener('change',async()=>{});
  renderSequenceTimeline();
  function refreshTimelineAvailability(){
   $('timelineAdd').disabled=!fileBytesReady||!validateTimes()||sequenceClips.length>=30;
   $('timelinePlay').disabled=!sequenceClips.length||!selectedFile||sequencePlaying;
  }
  source.addEventListener('loadedmetadata',refreshTimelineAvailability);
- $('filemeta').addEventListener('DOMSubtreeModified',refreshTimelineAvailability);
  $('start').addEventListener('input',refreshTimelineAvailability);
  $('end').addEventListener('input',refreshTimelineAvailability);
  const timelineFileObserver=new MutationObserver(refreshTimelineAvailability);
