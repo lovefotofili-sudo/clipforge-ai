@@ -191,6 +191,13 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
             <div class="smartstatus" id="batchStatus" aria-live="polite"></div>
             <div id="batchDownloads" class="momentlist"></div>
           </div>
+          <div class="formatbox" id="productionIntel">
+            <div class="smarttitle">PRODUCTION INTELLIGENCE</div>
+            <p class="hint">Run a preflight across your saved edits and batch queue. Checks repeated moments, overlapping trims, caption timing and export coverage. These are local rule-based checks, not semantic AI scene recognition.</p>
+            <div class="actions"><button type="button" id="analyzeProduction">✦ Analyze production</button></div>
+            <div class="smartstatus" id="intelSummary" aria-live="polite">Ready to inspect your production.</div>
+            <div class="momentlist" id="intelFindings"></div>
+          </div>
           <div class="formatbox" id="clipProfileStudio">
             <div class="smarttitle">PER-CLIP EDITING STUDIO</div>
             <p class="hint">Keep independent trims, framing and captions for each clip. Save an edit profile, then load it later without rebuilding your settings.</p>
@@ -1188,6 +1195,52 @@ renderSubtitleRows();
 
 
 
+
+
+// V3.3 Production Intelligence: local preflight and duplicate/coverage analysis.
+function overlapRatio(a,b){
+ const intersection=Math.max(0,Math.min(a.end,b.end)-Math.max(a.start,b.start));
+ const shortest=Math.max(0.001,Math.min(a.end-a.start,b.end-b.start));
+ return intersection/shortest;
+}
+function runProductionIntelligence(){
+ const findings=[];
+ const profiles=clipProfiles.map(p=>({name:p.name,start:Number(p.settings.start),end:Number(p.settings.end),ratio:p.settings.aspectRatio,source:p.sourceName||'',captions:p.settings.captions||[]}));
+ const jobs=creatorBatch.map(j=>({name:j.name,filename:j.filename,start:Number(j.start),end:Number(j.end),ratio:j.ratio,status:j.status,captions:j.captions||[]}));
+ const all=[...profiles.map(x=>({...x,type:'profile'})),...jobs.map(x=>({...x,type:'batch'}))];
+ if(!all.length)findings.push({kind:'info',text:'No saved profiles or batch jobs yet. Save an edit profile or add batch formats, then analyze again.'});
+ for(let i=0;i<all.length;i++){
+  const item=all[i],duration=item.end-item.start;
+  if(!Number.isFinite(item.start)||!Number.isFinite(item.end)||duration<=0)findings.push({kind:'risk',text:item.name+': invalid trim range. Check start and end before export.'});
+  else if(duration<2.5)findings.push({kind:'warn',text:item.name+': very short ('+duration.toFixed(1)+'s). Confirm the moment has enough context.'});
+  if(item.type==='profile'&&selectedFile&&item.source&&item.source!==selectedFile.name)findings.push({kind:'risk',text:item.name+': saved against '+item.source+', but current source is '+selectedFile.name+'.'});
+  if(item.type==='batch'&&source&&item.end>source.duration)findings.push({kind:'risk',text:item.filename+': trim extends beyond the currently loaded video.'});
+  const invalid=(item.captions||[]).filter(cap=>Number(cap.end)<=Number(cap.start)||Number(cap.start)<0||Number(cap.end)>duration+0.15);
+  if(invalid.length)findings.push({kind:'warn',text:item.name+': '+invalid.length+' caption(s) have timing outside this clip or invalid duration.'});
+  if(item.type==='batch'&&item.status==='failed')findings.push({kind:'warn',text:item.filename+': previous export failed. Recheck source and settings before retrying.'});
+ }
+ for(let i=0;i<all.length;i++)for(let j=i+1;j<all.length;j++){
+  const a=all[i],b=all[j];
+  if(a.type!==b.type||a.ratio!==b.ratio)continue;
+  if(a.source&&b.source&&a.source!==b.source)continue;
+  const overlap=overlapRatio(a,b);
+  if(overlap>=0.82)findings.push({kind:'warn',text:a.name+' and '+b.name+' are near-duplicate '+a.ratio+' edits ('+Math.round(overlap*100)+'% of the shorter trim overlaps).'});
+  else if(overlap>=0.45)findings.push({kind:'info',text:a.name+' and '+b.name+' share '+Math.round(overlap*100)+'% of the shorter trim. Check whether both are needed.'});
+ }
+ const ratios=[...new Set(all.map(x=>x.ratio).filter(Boolean))];
+ if(all.length&&ratios.length===1)findings.push({kind:'info',text:'Only '+ratios[0]+' output is represented. Add another format if you need platform-specific versions.'});
+ if(creatorBatch.length>6)findings.push({kind:'warn',text:'Large batch ('+creatorBatch.length+' jobs). Sequential exporting is enabled; keep this tab open until it finishes.'});
+ if(!findings.some(x=>x.kind==='risk'||x.kind==='warn'))findings.unshift({kind:'good',text:'No high-priority issues found in the saved edits and batch queue.'});
+ $('intelFindings').innerHTML='';
+ findings.forEach(f=>{
+  const row=document.createElement('div');row.className='moment';
+  const label=document.createElement('span');label.textContent=(f.kind==='risk'?'⚠ ':f.kind==='warn'?'! ':f.kind==='good'?'✓ ':'• ')+f.text;
+  row.appendChild(label);$('intelFindings').appendChild(row);
+ });
+ const risks=findings.filter(x=>x.kind==='risk').length,warns=findings.filter(x=>x.kind==='warn').length;
+ $('intelSummary').textContent='Checked '+all.length+' edit(s): '+risks+' critical issue(s), '+warns+' warning(s), '+findings.filter(x=>x.kind==='info').length+' note(s). Review findings before exporting.';
+}
+$('analyzeProduction').addEventListener('click',runProductionIntelligence);
 
 // V3.2 independent per-clip edit profiles.
 const clipProfiles=[];
