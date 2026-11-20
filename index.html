@@ -151,7 +151,7 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
           <strong>Drop a video here</strong>
           <p>Or choose a file from your phone</p>
           <button type="button" class="filebtn" id="chooseFile">＋ Choose original video file</button>
-          <input class="fileinput" id="file" type="file" accept="video/*,.mp4,.mov,.m4v,.webm,.3gp">
+          <input class="fileinput" id="file" type="file" accept="video/*,.mp4,.mov,.m4v,.webm,.3gp,.mkv,.avi,.mpeg,.mpg,.ts,.mts,.m2ts,.3g2,.wmv,.flv">
         </div>
         <div class="divider">OR PASTE A YOUTUBE LINK</div>
         <div class="linkrow">
@@ -426,9 +426,9 @@ function tryDataUrlFallback(file, attempt) {
 function useFile(file) {
   if (!file) return;
   const ext = (file.name.split('.').pop() || '').toLowerCase();
-  const videoExtension = ['mp4','mov','m4v','webm','3gp','mkv','avi','mpeg','mpg'].includes(ext);
+  const videoExtension = ['mp4','mov','m4v','webm','3gp','3g2','mkv','avi','mpeg','mpg','ts','mts','m2ts','wmv','flv'].includes(ext);
   if (!(file.type && file.type.startsWith('video/')) && !videoExtension) {
-    setStatus('That file does not look like a supported video. Choose an MP4, MOV, WebM or similar video.', 'bad');
+    setStatus('Android provided a file that CLIPFORGE cannot identify as a video. Try choosing it from the Videos tab or use an MP4/MOV copy.', 'bad');
     return;
   }
   if (!file.size) {
@@ -471,13 +471,13 @@ function useFile(file) {
     if (attempt !== loadAttempt || selectedFile !== file) return;
     fileSnapshotReader = null;
     console.error('[CLIPFORGE file snapshot error]', reader.error);
-    setStatus('Could not prepare this video for export. Choose the file again and retry.', 'bad');
+    setStatus('The video preview may still work, but the original file could not be read for export. Re-select it from the Videos tab and wait for preparation to finish.', 'bad');
     updateButtons();
   };
   reader.onabort = () => {
     if (attempt !== loadAttempt || selectedFile !== file) return;
     fileSnapshotReader = null;
-    setStatus('Video preparation was interrupted. Choose the file again and retry.', 'bad');
+    setStatus('Video preparation was interrupted. Re-select the video from the Videos tab and wait for preparation to finish.', 'bad');
     updateButtons();
   };
   reader.readAsArrayBuffer(file);
@@ -522,10 +522,10 @@ source.addEventListener('error', () => {
   }
   clearMediaLoadTimer();
   const detail = code === 3
-    ? 'Chrome could not decode this video. It may use an unsupported codec.'
+    ? 'Chrome received the video, but cannot decode its codec. Try an MP4 encoded with H.264 video and AAC audio.'
     : code === 4
-      ? 'Chrome does not support this video format or codec.'
-      : 'Chrome could not read the selected video file.';
+      ? 'Chrome received the file, but does not support its container or codec. Try an MP4 encoded with H.264 video and AAC audio.'
+      : 'Chrome could not read the selected video. Try choosing it again from the Videos tab.';
   $('duration').textContent = 'Video metadata unavailable.';
   setStatus(`${detail} Try an MP4 encoded with H.264 video and AAC audio.`, 'bad');
   updateButtons();
