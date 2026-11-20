@@ -1276,8 +1276,8 @@ $('export').addEventListener('click', async () => {
   const exportCaptions = validSubtitleItems().filter(item => Number(item.end) > startSnapshot && Number(item.start) < endSnapshot).map(item => ({text:item.text.trim(),animation:$('subtitleAnimation').value,start:Math.max(0,Number(item.start)-startSnapshot),end:Math.min(endSnapshot,Number(item.end))-startSnapshot})).filter(item => item.text && item.end > item.start);
   let dimensions;
   let exportSucceeded = false;
-  try { dimensions = getOutputDimensions();
-  catch (error) { setStatus(error.message, 'bad'); return; }
+  try { dimensions = getOutputDimensions(); }
+  catch (error) { setStatus(error.message, 'bad'); if (creatorBatchResolve) { const done=creatorBatchResolve; creatorBatchResolve=null; done({ok:false}); } return; }
   busy = true; stopClipPreview(); updateButtons();
   $('progress').style.display = 'block'; $('progress').value = 0;
   $('download').style.display = 'none';
