@@ -138,7 +138,7 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V1.0 RC2 · EXPORT RELIABILITY</span>
+    <span class="badge">V1.0 RC4 · AUTO MOMENT FINDER</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -183,7 +183,7 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
           <div class="field"><label for="end">End time (seconds)</label><input id="end" type="number" min="0" step="0.1" value="10" placeholder="e.g. 9" inputmode="decimal"></div>
         </div>
         <p class="hint">Enter seconds only (for example, 3 and 9 — no colon). Or pause the preview and use “Set start” or “Set end”.</p>
-        <div class="smartbox"><div class="smarttitle">✦ CLIPFORGE CLIPPING ENGINE · V5.3</div><p class="smartdesc">Ranks visual activity, filters repetitive moments, and can use captions already in your project to flag likely hooks and endings. Caption cues are heuristic, not semantic understanding.</p><div class="formatrow three" style="margin-bottom:10px"><div><label class="formatlabel" for="momentScanMode">Scan detail</label><select id="momentScanMode"><option value="quick">Quick · mobile friendly</option><option value="balanced" selected>Balanced · recommended</option><option value="deep">Deep · slower</option></select></div><div><label class="formatlabel" for="momentResultCount">Suggestions</label><select id="momentResultCount"><option value="3">Top 3</option><option value="5" selected>Top 5</option><option value="8">Top 8</option></select></div></div><div class="actions" style="margin-top:0"><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><button type="button" class="secondary" id="cancelMomentScan" disabled>Cancel scan</button><button type="button" class="secondary" id="addAllMoments" disabled>＋ Add all to timeline</button></div><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div></div>
+        <div class="smartbox"><div class="smarttitle">✦ CLIPFORGE CLIPPING ENGINE · V5.3</div><p class="smartdesc">Ranks visual activity, filters repetitive moments, and can use captions already in your project to flag likely hooks and endings. Caption cues are heuristic, not semantic understanding.</p><div class="formatrow three" style="margin-bottom:10px"><div><label class="formatlabel" for="momentScanMode">Scan detail</label><select id="momentScanMode"><option value="quick">Quick · mobile friendly</option><option value="balanced" selected>Balanced · recommended</option><option value="deep">Deep · slower</option></select></div><div><label class="formatlabel" for="momentResultCount">Suggestions</label><select id="momentResultCount"><option value="3">Top 3</option><option value="5" selected>Top 5</option><option value="8">Top 8</option></select></div></div><label class="checkline" style="display:flex;align-items:center;gap:8px;margin:8px 0 10px"><input id="autoFindMoments" type="checkbox" checked> Automatically find best moments after upload</label><div class="actions" style="margin-top:0"><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><button type="button" class="secondary" id="cancelMomentScan" disabled>Cancel scan</button><button type="button" class="secondary" id="addAllMoments" disabled>＋ Add all to timeline</button></div><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div></div>
         <div class="clip-preview-panel">
           <div><div class="smarttitle">▶ CLIP PREVIEW</div><p class="preview-help">Preview your selected start and end times here. Output ratio and framing settings are separate below.</p></div>
           <button type="button" class="secondary previewclipbtn" id="previewClip" disabled>▶ Preview selected clip</button>
@@ -324,7 +324,7 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
     <button type="button" class="dock-nav" id="dockEdit"><span>✂</span>Edit</button>
     <button type="button" class="dock-export" id="dockExport" disabled>Export MP4 ↗</button>
   </nav>
-  <div class="foot">CLIPFORGE AI · V1.0 RC2 · RELEASE CANDIDATE</div>
+  <div class="foot">CLIPFORGE AI · V1.0 RC4 · RELEASE CANDIDATE</div>
 </div>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -360,6 +360,7 @@ async function toBlobURL(url, mimeType, label, onProgress) {
 let selectedFile = null, selectedFileBytes = null, fileBytesReady = false, sourceURL = null, outputURL = null;
 let fileSnapshotReader = null;
 let metadataTimer = null, fileReaderFallbackTried = false, loadAttempt = 0;
+let autoScanAttempt = -1;
 
 function setStatus(message, kind='') {
   $('status').textContent = message;
@@ -398,30 +399,43 @@ function showLoadedVideo() {
   }
   $('duration').textContent = `Video length: ${d.toFixed(1)} seconds`;
   $('end').value = Math.min(10, d).toFixed(1);
-  setStatus('Video preview ready. Choose your start and end times.', 'good');
+  setStatus('Video preview ready. Preparing automatic moment suggestions…', 'good');
   updateButtons();
+  if ($('autoFindMoments')?.checked && autoScanAttempt !== loadAttempt) {
+    const scanForAttempt = loadAttempt;
+    autoScanAttempt = scanForAttempt;
+    setTimeout(() => {
+      if (scanForAttempt === loadAttempt && selectedFile && Number.isFinite(source.duration) && !momentScanBusy) {
+        findBestMoments();
+      }
+    }, 450);
+  }
 }
-function tryDataUrlFallback(file, attempt) {
+async function tryDataUrlFallback(file, attempt) {
   if (attempt !== loadAttempt || fileReaderFallbackTried) return;
   fileReaderFallbackTried = true;
-  setStatus('The browser could not read the local video URL. Trying a compatibility fallback…');
-  const reader = new FileReader();
-  reader.onerror = () => {
+  setStatus('Trying an alternate local-file read…');
+  try {
+    if (typeof file.arrayBuffer !== 'function') throw new Error('This browser did not expose a readable file buffer.');
+    const buffer = await file.arrayBuffer();
     if (attempt !== loadAttempt) return;
-    clearMediaLoadTimer();
-    setStatus('This browser could not read the selected video. Try opening the page from an HTTPS website, then choose the video again.', 'bad');
-  };
-  reader.onload = () => {
-    if (attempt !== loadAttempt) return;
-    source.src = String(reader.result);
+    if (!buffer || buffer.byteLength !== file.size) throw new Error('The selected file was only partially readable.');
+    const blob = new Blob([buffer], {type:file.type || 'video/mp4'});
+    if (sourceURL) URL.revokeObjectURL(sourceURL);
+    sourceURL = URL.createObjectURL(blob);
+    source.src = sourceURL;
     source.load();
     clearMediaLoadTimer();
     metadataTimer = setTimeout(() => {
       if (attempt !== loadAttempt || Number.isFinite(source.duration)) return;
-      setStatus('The video file was selected, but Chrome still could not decode its preview. Try an MP4 encoded as H.264, or host this page over HTTPS.', 'bad');
+      setStatus('The file was read, but Chrome could not decode its video format. Try an MP4 encoded with H.264 video and AAC audio.', 'bad');
     }, 12000);
-  };
-  reader.readAsDataURL(file);
+  } catch (error) {
+    if (attempt !== loadAttempt) return;
+    clearMediaLoadTimer();
+    console.error('[CLIPFORGE alternate file read failed]', error);
+    setStatus('Android Gallery did not provide a readable video file to this browser. Try choosing the same video from the Files app (Downloads or Videos), or save a local MP4 copy and select it again.', 'bad');
+  }
 }
 function useFile(file) {
   if (!file) return;
@@ -444,43 +458,49 @@ function useFile(file) {
   $('youtubeHelp').textContent = `Selected: ${file.name}. Your original video is ready for Best Moment Finder and MP4 export.`;
   selectedFileBytes = null;
   fileBytesReady = false;
-  // Snapshot the selected file while its browser file permission is active.
-  // FileReader exposes progress and can be aborted when a different file is selected.
-  const reader = new FileReader();
-  fileSnapshotReader = reader;
-  reader.onprogress = event => {
-    if (attempt !== loadAttempt || selectedFile !== file || !event.lengthComputable) return;
-    setStatus('Preparing video for export… ' + Math.round(event.loaded / event.total * 100) + '%');
-  };
-  reader.onload = () => {
-    if (attempt !== loadAttempt || selectedFile !== file) return;
-    if (!(reader.result instanceof ArrayBuffer) || !reader.result.byteLength) {
-      setStatus('The selected video could not be read. Choose it again and retry.', 'bad');
-      return;
+  // Prefer the modern Blob API. Some Android document providers expose File
+  // objects that FileReader cannot consume even though arrayBuffer() succeeds.
+  fileSnapshotReader = {abort:()=>{}};
+  setStatus('Preparing the selected video for export…');
+  (async()=>{
+    try {
+      let buffer;
+      if (typeof file.arrayBuffer === 'function') {
+        try { buffer = await file.arrayBuffer(); }
+        catch (error) {
+          console.warn('[CLIPFORGE Blob.arrayBuffer failed; trying FileReader]', error);
+        }
+      }
+      if ((!buffer || !buffer.byteLength) && typeof FileReader !== 'undefined') {
+        buffer = await new Promise((resolve,reject)=>{
+          const fallbackReader = new FileReader();
+          fileSnapshotReader = fallbackReader;
+          fallbackReader.onload=()=>resolve(fallbackReader.result);
+          fallbackReader.onerror=()=>reject(fallbackReader.error || new Error('FileReader failed'));
+          fallbackReader.onabort=()=>reject(new Error('File read was cancelled'));
+          fallbackReader.readAsArrayBuffer(file);
+        });
+      }
+      if (attempt !== loadAttempt || selectedFile !== file) return;
+      if (!(buffer instanceof ArrayBuffer) || !buffer.byteLength || buffer.byteLength !== file.size) {
+        throw new Error('The browser returned an empty or incomplete file buffer.');
+      }
+      selectedFileBytes = new Uint8Array(buffer);
+      fileBytesReady = true;
+      fileSnapshotReader = null;
+      const sizeWarning = file.size > 220 * 1024 * 1024
+        ? ' This is a large file; mobile browsers may run short of memory during export.'
+        : '';
+      setStatus('Source video prepared for export.' + sizeWarning, 'good');
+      updateButtons();
+    } catch (error) {
+      if (attempt !== loadAttempt || selectedFile !== file) return;
+      fileSnapshotReader = null;
+      console.error('[CLIPFORGE file snapshot error]', error);
+      setStatus('The video preview may still work, but Android did not provide readable file data for export. Try selecting the same video from the Files app instead of Gallery.', 'bad');
+      updateButtons();
     }
-    selectedFileBytes = new Uint8Array(reader.result);
-    fileBytesReady = true;
-    fileSnapshotReader = null;
-    const sizeWarning = file.size > 220 * 1024 * 1024
-      ? ' This is a large file; mobile browsers may run short of memory during export.'
-      : '';
-    setStatus('Source video prepared for export.' + sizeWarning, 'good');
-    updateButtons();
-  };
-  reader.onerror = () => {
-    if (attempt !== loadAttempt || selectedFile !== file) return;
-    fileSnapshotReader = null;
-    console.error('[CLIPFORGE file snapshot error]', reader.error);
-    setStatus('The video preview may still work, but the original file could not be read for export. Re-select it from the Videos tab and wait for preparation to finish.', 'bad');
-    updateButtons();
-  };
-  reader.onabort = () => {
-    if (attempt !== loadAttempt || selectedFile !== file) return;
-    fileSnapshotReader = null;
-    setStatus('Video preparation was interrupted. Re-select the video from the Videos tab and wait for preparation to finish.', 'bad');
-    updateButtons();
-  };
-  reader.readAsArrayBuffer(file);
+  })();
   $('ytPreview').style.display = 'none';
   $('ytPreview').src = '';
   $('linknotice').style.display = 'none';
