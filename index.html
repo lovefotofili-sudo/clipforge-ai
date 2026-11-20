@@ -847,7 +847,8 @@ async function loadEngine() {
   }
 }
 
-let momentScanBusy = false;\nlet momentScanCancelRequested = false;
+let momentScanBusy = false;
+let momentScanCancelRequested = false;
 function seekForScan(time) {
   return new Promise((resolve, reject) => {
     const target = Math.max(0, Math.min(Math.max(0, source.duration - 0.05), time));
@@ -908,7 +909,9 @@ async function findBestMoments() {
   source.pause();
   try {
     const duration = source.duration;
-    const scanMode=$('momentScanMode')?.value||'balanced';\n    const targetSamples=scanMode==='quick'?36:scanMode==='deep'?120:72;\n    const step = Math.max(0.75, duration / targetSamples);
+    const scanMode=$('momentScanMode')?.value||'balanced';
+    const targetSamples=scanMode==='quick'?36:scanMode==='deep'?120:72;
+    const step = Math.max(0.75, duration / targetSamples);
     const width = 64, height = 36;
     const canvas = document.createElement('canvas');
     canvas.width = width; canvas.height = height;
@@ -1104,7 +1107,8 @@ async function findBestMoments() {
     $('findMoments').disabled=!selectedFile;
   }
 }
-$('findMoments').addEventListener('click', findBestMoments);\n$('cancelMomentScan').addEventListener('click',()=>{if(momentScanBusy){momentScanCancelRequested=true;$('smartStatus').textContent='Cancelling scan…';$('cancelMomentScan').disabled=true;}});
+$('findMoments').addEventListener('click', findBestMoments);
+$('cancelMomentScan').addEventListener('click',()=>{if(momentScanBusy){momentScanCancelRequested=true;$('smartStatus').textContent='Cancelling scan…';$('cancelMomentScan').disabled=true;}});
 
 
 /* V1.7 subtitle editor: editable captions + local Whisper transcription + live preview + SRT export */
@@ -1139,7 +1143,8 @@ function wrapSubtitleText(value, maxChars=30) {
     else line = candidate;
   }
   if (line) lines.push(line);
-  return lines.join('\n');
+  return lines.join('
+');
 }
 function subtitleTextAtTime(item, now) {
   const words = String(item.text || '').trim().split(/\s+/).filter(Boolean);
@@ -1295,8 +1300,13 @@ $('downloadSrt').addEventListener('click', () => {
   const valid = validSubtitleItems().sort((a,b) => Number(a.start)-Number(b.start));
   if (!valid.length) return;
   const content = valid.map((item,index) =>
-    (index + 1) + '\n' + subtitleTime(item.start) + ' --> ' + subtitleTime(item.end) + '\n' + item.text.trim()
-  ).join('\n\n') + '\n';
+    (index + 1) + '
+' + subtitleTime(item.start) + ' --> ' + subtitleTime(item.end) + '
+' + item.text.trim()
+  ).join('
+
+') + '
+';
   const url = URL.createObjectURL(new Blob([content],{type:'text/plain;charset=utf-8'}));
   const a = document.createElement('a');
   a.href = url; a.download = 'clipforge-subtitles.srt';
