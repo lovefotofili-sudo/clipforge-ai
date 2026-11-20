@@ -67,20 +67,71 @@ button:hover,.filebtn:hover{filter:brightness(1.12);transform:translateY(-1px)}b
 progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);display:none}
 .note{margin-top:18px;color:#888397;font-size:11px;line-height:1.6}.foot{margin-top:25px;color:#6f6a7e;font-size:11px;text-align:center}
 @media(max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding:18px 13px 45px}.card{padding:16px}.top{margin-bottom:24px}.preview{max-height:260px}}
+
+/* V3.4 mobile-first creator controls */
+.mobile-dock{display:none}
+@media(max-width:760px){
+ body{padding-bottom:calc(82px + env(safe-area-inset-bottom))}
+ .wrap{padding:14px 12px calc(28px + env(safe-area-inset-bottom))}
+ .top{align-items:flex-start;margin-bottom:18px;flex-wrap:wrap}
+ .badge{font-size:9px;padding:5px 7px}
+ h1{font-size:clamp(27px,8vw,38px)}
+ .sub{font-size:13px;margin-bottom:18px}
+ .grid{gap:12px}
+ .card{padding:14px;border-radius:15px;min-width:0}
+ .card h2{margin-bottom:12px}
+ .drop{padding:19px 12px}
+ .linkrow{gap:6px}
+ .linkrow button{padding:10px 11px;min-height:44px}
+ .linkrow input,.field input,.formatrow select,.formatrow input,.subtitle-row input{font-size:16px;min-height:44px}
+ .preview{max-height:52vh;margin-top:12px}
+ .timeline{padding:13px 11px}
+ .timeline input,.framing input{min-height:34px;touch-action:pan-x}
+ .timeline-actions button,.actions button,.moment button{min-height:42px}
+ .controls,.formatrow,.formatrow.three{grid-template-columns:1fr 1fr;gap:9px}
+ .formatbox,.chooseclipbox,.subtitlebox{padding:12px}
+ .moment{align-items:flex-start;flex-wrap:wrap}
+ .moment span{min-width:0;overflow-wrap:anywhere}
+ .actions{gap:8px}
+ .actions>*{flex:1 1 145px}
+ .primary{min-height:48px}
+ #creatorStudio{margin-top:12px!important}
+ #batchFormats{min-height:116px}
+ .mobile-dock{
+  position:fixed;z-index:10000;left:0;right:0;bottom:0;
+  display:grid;grid-template-columns:.8fr .8fr 1.5fr;gap:8px;
+  padding:9px 12px calc(9px + env(safe-area-inset-bottom));
+  background:#0d0b14f5;border-top:1px solid #39304d;
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)
+ }
+ .mobile-dock button{min-height:48px;border-radius:12px;padding:8px 10px;font-size:12px}
+ .dock-nav{background:#211c2e;border:1px solid #39334b;color:#e8e0ff;flex-direction:column;gap:1px}
+ .dock-nav span{font-size:15px;line-height:1.1}
+ .dock-export{font-size:13px!important}
+ .mobile-dock button:disabled{opacity:.4}
+ #importCard,#editCard,#creatorStudio{scroll-margin-top:14px}
+ .foot{padding-bottom:8px}
+}
+@media(max-width:380px){
+ .controls,.formatrow,.formatrow.three{grid-template-columns:1fr}
+ .mobile-dock{grid-template-columns:.72fr .72fr 1.4fr;padding-left:8px;padding-right:8px}
+ .mobile-dock button{font-size:11px;padding:7px}
+}
+
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V2.7.0 · SMART HIGHLIGHT FINDER</span>
+    <span class="badge">V3.4 · MOBILE CREATOR</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
     <h1>Long video in.<br><span class="grad">Perfect clip out.</span></h1>
     <p class="sub">Find promising moments at different lengths, review the ranked suggestions, then export the clip you want. Your video is processed in this browser.</p>
     <div class="grid">
-      <section class="card">
+      <section class="card" id="importCard">
         <div class="step">01 / IMPORT</div><h2>Upload your video</h2>
         <div class="drop" id="drop">
           <strong>Drop a video here</strong>
@@ -110,7 +161,7 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
         <div class="linknotice" id="linknotice" style="display:none">YouTube preview only. To edit this video, use a video file you own or have permission to use, then upload that file above. CLIPFORGE cannot download or extract the video from YouTube.</div>
         <div class="duration" id="duration"></div>
       </section>
-      <section class="card">
+      <section class="card" id="editCard">
         <div class="step">02 / TRIM</div><h2>Choose your clip</h2>
         <div class="chooseclipbox">
         <div class="controls">
@@ -221,7 +272,12 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
       </section>
     </div>
   </main>
-  <div class="foot">CLIPFORGE AI · V2.7.0 · SMART MOMENT FINDER</div>
+  <nav class="mobile-dock" id="mobileDock" aria-label="Quick creator controls">
+    <button type="button" class="dock-nav" id="dockImport"><span>＋</span>Import</button>
+    <button type="button" class="dock-nav" id="dockEdit"><span>✂</span>Edit</button>
+    <button type="button" class="dock-export" id="dockExport" disabled>Export MP4 ↗</button>
+  </nav>
+  <div class="foot">CLIPFORGE AI · V3.4 · MOBILE CREATOR EXPERIENCE</div>
 </div>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -1494,6 +1550,16 @@ window.addEventListener('unhandledrejection', (event) => {
   console.error('[CLIPFORGE async error]', event.reason);
   if ($('status')) setStatus('Loading error: ' + (event.reason?.message || String(event.reason)) + '. Check internet and reload.', 'bad');
 });
+
+ // V3.4 mobile dock mirrors the real export control; no separate export pipeline.
+ function syncMobileDock(){const dock=$('dockExport');if(dock)dock.disabled=$('export').disabled;}
+ $('dockImport').addEventListener('click',()=> $('importCard').scrollIntoView({behavior:'smooth',block:'start'}));
+ $('dockEdit').addEventListener('click',()=> $('editCard').scrollIntoView({behavior:'smooth',block:'start'}));
+ $('dockExport').addEventListener('click',()=>{if(!$('export').disabled){$('export').click();$('editCard').scrollIntoView({behavior:'smooth',block:'end'});}});
+ const originalUpdateButtons=updateButtons;
+ updateButtons=function(){originalUpdateButtons();syncMobileDock();};
+ syncMobileDock();
+ 
 </script>
 </body>
 </html>
