@@ -256,6 +256,7 @@ function updateButtons() {
   $('setStart').disabled = busy || !selectedFile;
   $('setEnd').disabled = busy || !selectedFile;
   $('previewClip').disabled = busy || !selectedFile || !validateTimes();
+  if ($('addBatchJobs')) $('addBatchJobs').disabled = busy || !fileBytesReady || !validateTimes();
 }
 function formatBytes(bytes) {
   if (bytes < 1024*1024) return (bytes/1024).toFixed(0)+' KB';
