@@ -852,15 +852,16 @@ let momentScanCancelRequested = false;
 function seekForScan(time) {
   return new Promise((resolve, reject) => {
     const target = Math.max(0, Math.min(Math.max(0, source.duration - 0.05), time));
-    // Android browsers can report a seek as complete slightly before the
-    // decoded frame is ready. Allow a wider timestamp tolerance, but still
-    // require decoded data before drawing to the analysis canvas.
     const closeEnough = () => Math.abs(source.currentTime - target) < 0.35 && !source.seeking;
     if (closeEnough() && source.readyState >= 2) { resolve(); return; }
-    let settled = false, nudged = false, timer = null, poll = null;
+    let settled = false, retried = false, timer = null, poll = null, frameTimer = null, videoFrameId = null;
     const cleanup = () => {
       if (timer !== null) clearTimeout(timer);
       if (poll !== null) clearInterval(poll);
+      if (frameTimer !== null) clearTimeout(frameTimer);
+      if (videoFrameId !== null && typeof source.cancelVideoFrameCallback === 'function') {
+        try { source.cancelVideoFrameCallback(videoFrameId); } catch {}
+      }
       source.removeEventListener('seeked', done);
       source.removeEventListener('timeupdate', done);
       source.removeEventListener('loadeddata', done);
@@ -869,21 +870,48 @@ function seekForScan(time) {
     };
     const finish = () => { if (settled) return; settled = true; cleanup(); resolve(); };
     const fail = error => { if (settled) return; settled = true; cleanup(); reject(error); };
-    const done = () => { if (closeEnough() && source.readyState >= 2) finish(); };
+    const done = () => {
+      if (!closeEnough() || source.readyState < 2) return;
+      // Wait for the browser to present a decoded frame after seeking.
+      if (typeof source.requestVideoFrameCallback === 'function') {
+        if (videoFrameId !== null) return;
+        videoFrameId = source.requestVideoFrameCallback(() => {
+          videoFrameId = null;
+          if (closeEnough() && source.readyState >= 2) finish();
+          else done();
+        });
+        if (frameTimer === null) {
+          frameTimer = setTimeout(() => {
+            frameTimer = null;
+            if (closeEnough() && source.readyState >= 2) {
+              requestAnimationFrame(() => requestAnimationFrame(() => {
+                if (closeEnough() && source.readyState >= 2) finish();
+                else done();
+              }));
+            }
+          }, 1400);
+        }
+      } else {
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          if (closeEnough() && source.readyState >= 2) finish();
+        }));
+      }
+    };
     const onError = () => fail(new Error('The browser could not decode this video frame.'));
     const armTimeout = ms => {
       if (timer !== null) clearTimeout(timer);
       timer = setTimeout(() => {
-        if (closeEnough() && source.readyState >= 2) return finish();
-        // A few mobile decoders occasionally drop the first seek event.
-        // Re-issue the same seek once instead of immediately aborting the scan.
-        if (!nudged) {
-          nudged = true;
-          try { source.currentTime = target; armTimeout(10000); }
-          catch (error) { fail(error); }
+        if (closeEnough() && source.readyState >= 2) return done();
+        if (!retried) {
+          retried = true;
+          try {
+            // A tiny time nudge forces some mobile decoders to refresh a stalled frame.
+            source.currentTime = Math.min(Math.max(0, source.duration - 0.05), target + 0.015);
+            armTimeout(8000);
+          } catch (error) { fail(error); }
           return;
         }
-        fail(new Error('This video frame is still loading after a retry. Try scanning again after the video has played for a few seconds.'));
+        fail(new Error('The browser could not prepare a decoded frame at ' + target.toFixed(1) + 's. Try Quick Scan, or play the video briefly and scan again.'));
       }, ms);
     };
     source.addEventListener('seeked', done);
@@ -894,7 +922,7 @@ function seekForScan(time) {
     try {
       source.currentTime = target;
       poll = setInterval(done, 100);
-      armTimeout(9000);
+      armTimeout(8000);
     } catch (error) { fail(error); }
   });
 }
