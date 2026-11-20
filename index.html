@@ -472,6 +472,7 @@ function updateButtons() {
   $('setStart').disabled = busy || !selectedFile;
   $('setEnd').disabled = busy || !selectedFile;
   $('previewClip').disabled = busy || !selectedFile || !validateTimes();
+  if(typeof updateBatchStudio==='function')updateBatchStudio();
 }
 function formatBytes(bytes) {
   if (bytes < 1024*1024) return (bytes/1024).toFixed(0)+' KB';
@@ -1620,21 +1621,28 @@ $('exportNext').addEventListener('click',()=>{
   startNextQueuedExport();
 });
 
+let batchPreparing=false;
 function updateBatchStudio(){
   const ratios=[...document.querySelectorAll('.batch-ratio:checked')].map(input=>input.value);
   const eligible=momentQueue.filter(item=>item.status==='pending'||item.status==='failed');
   const jobs=eligible.length*ratios.length;
   $('batchSummary').textContent=eligible.length+' waiting clip(s) × '+ratios.length+' format(s) = '+jobs+' export job(s).';
-  $('runBatch').disabled=busy||!fileBytesReady||eligible.length===0||ratios.length===0||jobs>60;
+  $('runBatch').disabled=busy||batchPreparing||!selectedFile||eligible.length===0||ratios.length===0||jobs>60;
   if(jobs>60)$('batchStatus').textContent='This batch exceeds 60 jobs. Reduce the number of clips or formats.';
 }
 document.querySelectorAll('.batch-ratio').forEach(input=>input.addEventListener('change',updateBatchStudio));
-$('runBatch').addEventListener('click',()=>{
-  if(busy||!fileBytesReady)return;
+$('runBatch').addEventListener('click',async()=>{
+  if(busy||batchPreparing||!selectedFile)return;
   const ratios=[...document.querySelectorAll('.batch-ratio:checked')].map(input=>input.value);
   const eligible=momentQueue.filter(item=>item.status==='pending'||item.status==='failed');
   const jobs=eligible.length*ratios.length;
   if(!ratios.length||!eligible.length||jobs>60){updateBatchStudio();return;}
+  batchPreparing=true;updateBatchStudio();
+  $('batchStatus').textContent='Preparing your selected video for batch export…';
+  try{await ensureFileBytes();}
+  catch(error){$('batchStatus').textContent='Could not prepare the source video: '+(error?.message||String(error));batchPreparing=false;updateBatchStudio();return;}
+  batchPreparing=false;
+  if(busy||!fileBytesReady){updateBatchStudio();return;}
   const fit=$('fitMode').value,size=$('renderSize').value,frameX=Number($('frameX').value)||50,frameY=Number($('frameY').value)||50;
   const completed=momentQueue.filter(item=>item.status==='completed');
   const created=[];
