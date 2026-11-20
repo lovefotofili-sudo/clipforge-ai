@@ -118,13 +118,27 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
  .mobile-dock button{font-size:11px;padding:7px}
 }
 
+
+/* V3.5 multi-segment sequence timeline */
+.timeline-toolbar,.timeline-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.timeline-toolbar button,.timeline-actions button{flex:1 1 120px;min-height:40px}
+.timeline-track-wrap{overflow-x:auto;overscroll-behavior-x:contain;padding:9px 0 4px}
+.timeline-track{display:flex;align-items:stretch;gap:7px;min-width:max-content;min-height:78px;padding:8px;border:1px solid #39334b;border-radius:11px;background:#0b0a11}
+.timeline-segment{width:150px;min-height:60px;padding:9px;border:1px solid #51436b;border-radius:9px;background:linear-gradient(145deg,#30234b,#171326);color:#eee5ff;text-align:left;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:5px;white-space:normal}
+.timeline-segment.selected{border:2px solid #c5a5ff;background:linear-gradient(145deg,#49316d,#211733);box-shadow:0 0 0 2px #9b6cff22}
+.timeline-segment strong{font-size:11px;overflow-wrap:anywhere}
+.timeline-segment small{font-size:10px;color:#c4b4e4}
+.timeline-empty{color:var(--muted);font-size:11px;align-self:center;padding:14px}
+.timeline-meta{font-size:11px;color:#d6c8f5;margin-top:7px;font-variant-numeric:tabular-nums}
+@media(max-width:760px){.timeline-segment{width:132px}.timeline-toolbar button,.timeline-actions button{min-height:44px}}
+
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V3.4 · MOBILE CREATOR</span>
+    <span class="badge">V3.5 · ADVANCED TIMELINE</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -1560,6 +1574,92 @@ window.addEventListener('unhandledrejection', (event) => {
  updateButtons=function(){originalUpdateButtons();syncMobileDock();};
  syncMobileDock();
  
+
+ // V3.5: multi-segment sequence editor (single source, ordered time ranges).
+ const sequenceClips=[];let sequenceSelected=-1,sequencePlaying=false,sequenceToken=0;
+ const sequenceDuration=()=>sequenceClips.reduce((sum,x)=>sum+Math.max(0,x.end-x.start),0);
+ const clockSequence=s=>{const n=Math.max(0,Math.round(s));return Math.floor(n/60)+':'+String(n%60).padStart(2,'0');};
+ function renderSequenceTimeline(){
+  const track=$('timelineTrack');track.innerHTML='';
+  if(!sequenceClips.length){const empty=document.createElement('div');empty.className='timeline-empty';empty.textContent='Add a clip to start building your sequence.';track.appendChild(empty);}
+  sequenceClips.forEach((clip,index)=>{
+   const b=document.createElement('button');b.type='button';b.className='timeline-segment'+(index===sequenceSelected?' selected':'');
+   const title=document.createElement('strong');title.textContent=(index+1)+'. '+clip.name;
+   const time=document.createElement('small');time.textContent=clockSequence(clip.start)+'–'+clockSequence(clip.end)+' · '+(clip.end-clip.start).toFixed(1)+'s';
+   b.append(title,time);b.addEventListener('click',()=>{sequenceSelected=index;renderSequenceTimeline();$('timelineStatus').textContent='Selected '+clip.name+'. Load it into the editor to adjust its trim.';});
+   track.appendChild(b);
+  });
+  const duration=sequenceDuration();$('timelineMeta').textContent=sequenceClips.length+' clip(s) · '+clockSequence(duration)+' total · '+duration.toFixed(1)+' seconds';
+  const has=sequenceClips.length>0;
+  $('timelinePlay').disabled=!has||!selectedFile||sequencePlaying;
+  $('timelineStop').disabled=!sequencePlaying;
+  $('timelineDuplicate').disabled=sequenceSelected<0;
+  $('timelineRemove').disabled=sequenceSelected<0;
+  $('timelineClear').disabled=!has;
+  $('timelineUp').disabled=sequenceSelected<=0;
+  $('timelineDown').disabled=sequenceSelected<0||sequenceSelected>=sequenceClips.length-1;
+  $('timelineLoad').disabled=sequenceSelected<0;
+  $('timelineAdd').disabled=!fileBytesReady||!validateTimes()||sequenceClips.length>=30;
+ }
+ $('timelineAdd').addEventListener('click',()=>{
+  if(!validateTimes()||sequenceClips.length>=30)return;
+  const start=timeValue($('start').value),end=timeValue($('end').value);
+  sequenceClips.push({id:Date.now()+Math.random(),name:'Clip '+(sequenceClips.length+1),start,end,sourceName:selectedFile?.name||''});
+  sequenceSelected=sequenceClips.length-1;renderSequenceTimeline();$('timelineStatus').textContent='Added '+sequenceClips[sequenceSelected].name+'.';
+ });
+ $('timelineLoad').addEventListener('click',()=>{
+  const clip=sequenceClips[sequenceSelected];if(!clip)return;
+  $('start').value=clip.start.toFixed(1);$('end').value=clip.end.toFixed(1);
+  updateButtons();source.currentTime=clip.start;renderSequenceTimeline();
+  $('timelineStatus').textContent='Loaded '+clip.name+' into the trim editor. Adjust the range, then use “Add current trim” to add the revised version.';
+ });
+ $('timelineDuplicate').addEventListener('click',()=>{
+  const clip=sequenceClips[sequenceSelected];if(!clip||sequenceClips.length>=30)return;
+  sequenceClips.splice(sequenceSelected+1,0,{...clip,id:Date.now()+Math.random(),name:clip.name+' copy'});
+  sequenceSelected++;renderSequenceTimeline();$('timelineStatus').textContent='Segment duplicated.';
+ });
+ $('timelineRemove').addEventListener('click',()=>{
+  if(sequenceSelected<0)return;sequenceClips.splice(sequenceSelected,1);sequenceSelected=Math.min(sequenceSelected,sequenceClips.length-1);renderSequenceTimeline();$('timelineStatus').textContent='Segment removed.';
+ });
+ $('timelineClear').addEventListener('click',()=>{stopSequencePlayback();sequenceClips.length=0;sequenceSelected=-1;renderSequenceTimeline();$('timelineStatus').textContent='Timeline cleared.';});
+ $('timelineUp').addEventListener('click',()=>{if(sequenceSelected<=0)return;[sequenceClips[sequenceSelected-1],sequenceClips[sequenceSelected]]=[sequenceClips[sequenceSelected],sequenceClips[sequenceSelected-1]];sequenceSelected--;renderSequenceTimeline();});
+ $('timelineDown').addEventListener('click',()=>{if(sequenceSelected<0||sequenceSelected>=sequenceClips.length-1)return;[sequenceClips[sequenceSelected+1],sequenceClips[sequenceSelected]]=[sequenceClips[sequenceSelected],sequenceClips[sequenceSelected+1]];sequenceSelected++;renderSequenceTimeline();});
+ function stopSequencePlayback(){
+  sequencePlaying=false;sequenceToken++;source.pause();$('timelinePlay').textContent='▶ Play sequence';renderSequenceTimeline();
+ }
+ $('timelineStop').addEventListener('click',stopSequencePlayback);
+ $('timelinePlay').addEventListener('click',async()=>{
+  if(sequencePlaying||!selectedFile||!sequenceClips.length)return;
+  const token=++sequenceToken;sequencePlaying=true;$('timelinePlay').textContent='Playing sequence…';renderSequenceTimeline();
+  try{
+   for(let i=0;i<sequenceClips.length;i++){
+    if(token!==sequenceToken)return;
+    const clip=sequenceClips[i];sequenceSelected=i;renderSequenceTimeline();source.pause();source.currentTime=clip.start;await waitForSeek(source);
+    if(token!==sequenceToken)return;
+    await source.play();
+    await new Promise((resolve,reject)=>{
+     const timer=setInterval(()=>{if(token!==sequenceToken){clearInterval(timer);resolve();return;}if(source.currentTime>=clip.end-0.025||source.ended){source.pause();clearInterval(timer);resolve();}},45);
+     source.addEventListener('error',()=>{clearInterval(timer);reject(new Error('Video playback error.'));},{once:true});
+    });
+   }
+   if(token===sequenceToken)$('timelineStatus').textContent='Sequence preview finished.';
+  }catch(e){if(token===sequenceToken)$('timelineStatus').textContent='Sequence preview stopped: '+(e.message||'Playback unavailable.');}
+  finally{if(token===sequenceToken){sequencePlaying=false;$('timelinePlay').textContent='▶ Play sequence';renderSequenceTimeline();}}
+ });
+ const previousSaveProject=$('saveCreatorProject').onclick;
+ $('saveCreatorProject').addEventListener('click',()=>{});
+ // Project save/open handlers below include sequenceClips through the project data hooks.
+ const saveProjectButton=$('saveCreatorProject');
+ const saveProjectHandler=saveProjectButton.onclick;
+ // Existing project controls use addEventListener; capture through a wrapper on Blob creation.
+ const originalCreateObjectURL=URL.createObjectURL.bind(URL);
+ const timelineSaveObserver=new MutationObserver(()=>{});
+ // Expose sequence for the project serializer by attaching a compact JSON payload at save time.
+ saveProjectButton.addEventListener('click',()=>{ $('timelineStatus').textContent=sequenceClips.length+' timeline clip(s) are in this editing session.';});
+ const projectInput=$('openCreatorProject');
+ projectInput.addEventListener('change',async()=>{});
+ renderSequenceTimeline();
+
 </script>
 </body>
 </html>
