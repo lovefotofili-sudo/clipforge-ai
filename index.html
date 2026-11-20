@@ -1103,23 +1103,32 @@ async function findBestMoments() {
         });
       });
       $('addAllMoments').onclick=()=>{
+        if(!selectedFile){$('smartStatus').textContent='Select the original video again before adding highlights.';return;}
+        const existingSource=sequenceClips.find(x=>x.sourceName&&x.sourceName!==selectedFile.name);
+        if(existingSource){$('smartStatus').textContent='Your timeline contains clips from '+existingSource.sourceName+'. Clear that timeline before adding highlights from a different video.';return;}
+        const capacity=Math.max(0,30-sequenceClips.length);
+        const batch=chosen.slice(0,capacity);
         let added=0;
-        for(const m of chosen){
-          if(sequenceClips.length>=30) break;
+        for(const m of batch){
+          const start=Math.max(0,Number(m.start));
+          const end=Math.min(duration,Number(m.end));
+          if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)continue;
           const label=m.hasHookCue?'Hook':m.hasEndingCue?'Ending':'Highlight';
-          sequenceClips.push({id:Date.now()+Math.random(),name:label+' '+(sequenceClips.length+1),start:m.start,end:Math.min(duration,m.end),sourceName:selectedFile.name,sourceSize:selectedFile.size||0,sourceLastModified:selectedFile.lastModified||0});
+          sequenceClips.push({id:Date.now()+Math.random(),name:label+' '+(sequenceClips.length+1),start,end,sourceName:selectedFile.name,sourceSize:selectedFile.size||0,sourceLastModified:selectedFile.lastModified||0});
           added++;
         }
-        if(added){sequenceSelected=sequenceClips.length-1;renderSequenceTimeline();$('smartStatus').textContent='Added '+added+' ranked highlights to timeline.';}
-        else $('smartStatus').textContent='Timeline is full (30 clips). Remove a segment first.';
+        if(added){sequenceSelected=sequenceClips.length-1;renderSequenceTimeline();$('smartStatus').textContent='Added '+added+' ranked highlights to timeline.'+(added<chosen.length?' Timeline limit or invalid ranges prevented adding the rest.':'');}
+        else $('smartStatus').textContent=capacity===0?'Timeline is full (30 clips). Remove a segment first.':'No valid highlights could be added.';
         $('addAllMoments').disabled=true;
       };
       [...$('momentList').querySelectorAll('[data-add-moment]')].forEach(button=>{
         button.addEventListener('click',()=>{
           const m=chosen[Number(button.dataset.addMoment)];
           if(sequenceClips.length>=30){$('smartStatus').textContent='Timeline limit reached (30 clips). Remove a segment before adding more.';return;}
-          if(!selectedFile||m.end<=m.start){$('smartStatus').textContent='Select a valid source video first.';return;}
-          sequenceClips.push({id:Date.now()+Math.random(),name:'Highlight '+(sequenceClips.length+1),start:m.start,end:Math.min(duration,m.end),sourceName:selectedFile.name,sourceSize:selectedFile.size||0,sourceLastModified:selectedFile.lastModified||0});
+          if(!selectedFile||!Number.isFinite(m.start)||!Number.isFinite(m.end)||m.end<=m.start){$('smartStatus').textContent='Select a valid source video first.';return;}
+          const existingSource=sequenceClips.find(x=>x.sourceName&&x.sourceName!==selectedFile.name);
+          if(existingSource){$('smartStatus').textContent='Your timeline contains clips from '+existingSource.sourceName+'. Clear it before adding highlights from a different video.';return;}
+          sequenceClips.push({id:Date.now()+Math.random(),name:'Highlight '+(sequenceClips.length+1),start:Math.max(0,m.start),end:Math.min(duration,m.end),sourceName:selectedFile.name,sourceSize:selectedFile.size||0,sourceLastModified:selectedFile.lastModified||0});
           sequenceSelected=sequenceClips.length-1;renderSequenceTimeline();
           $('smartStatus').textContent='Added highlight to timeline · '+sequenceClips.length+' segment(s).';
         });
