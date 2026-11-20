@@ -175,6 +175,29 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
         <div class="status" id="status" role="status" aria-live="polite">Choose a video to begin.</div>
         <progress id="progress" max="1" value="0"></progress>
         <div class="actions"><button class="primary" id="export" disabled>Fast export MP4 ↗</button></div>
+        <section class="card" id="creatorStudio" style="grid-column:1/-1;margin-top:18px">
+          <div class="step">03 / PRODUCE</div><h2>Creator Studio · Project & Batch Production</h2>
+          <p class="hint">Build a production list from the current trim, then create different aspect-ratio versions. Jobs run one at a time to reduce memory pressure on phones.</p>
+          <div class="formatbox">
+            <div class="smarttitle">BATCH OUTPUTS</div>
+            <div class="controls" style="margin-top:10px">
+              <label class="field"><span class="formatlabel">Select formats</span><select id="batchFormats" multiple size="4" style="width:100%;background:#0b0a11;color:white;border:1px solid #39334b;border-radius:10px;padding:8px"><option value="9:16" selected>9:16 · Vertical</option><option value="1:1">1:1 · Square</option><option value="16:9">16:9 · Landscape</option><option value="original">Original</option></select></label>
+              <label class="field"><span class="formatlabel">Batch name</span><input id="batchName" maxlength="48" value="My Clipforge Batch" style="width:100%;background:#0b0a11;color:white;border:1px solid #39334b;border-radius:10px;padding:10px"></label>
+            </div>
+            <div class="actions"><button type="button" id="addBatchJobs" disabled>＋ Add current clip in selected formats</button><button type="button" class="secondary" id="clearBatch">Clear batch</button></div>
+            <div class="smartstatus" id="batchSummary">No jobs queued.</div>
+            <div id="batchJobs" class="momentlist"></div>
+            <button type="button" class="primary" id="runBatch" disabled>▶ Run batch exports</button>
+            <div class="smartstatus" id="batchStatus" aria-live="polite"></div>
+            <div id="batchDownloads" class="momentlist"></div>
+          </div>
+          <div class="formatbox">
+            <div class="smarttitle">PORTABLE CREATOR PROJECT</div>
+            <p class="hint">Save your trim, output settings, captions and batch queue in a .clipforge project file. Original video and audio files are not embedded; reselect the source video when reopening.</p>
+            <div class="actions"><button type="button" id="saveCreatorProject">↓ Save project file</button><label class="filebtn secondary" for="openCreatorProject">Open project file<input id="openCreatorProject" type="file" accept=".clipforge,.json,application/json" style="display:none"></label></div>
+            <div class="smartstatus" id="projectStatus" aria-live="polite">Project files stay on your device.</div>
+          </div>
+        </section>
         <a id="download" class="filebtn" style="display:none;text-decoration:none;margin-top:12px" download="clipforge-clip.mp4">↓ Download MP4</a>
         <p class="note">The first export must download the video engine. Later visits may reuse cached files. Fast export avoids re-encoding when possible; some files may need a slower compatibility conversion. Keep this tab open.</p>
       </section>
@@ -1152,6 +1175,96 @@ window.addEventListener('scroll', updateSubtitleOverlay, {passive:true});
 renderSubtitleRows();
 
 
+
+// V3 Creator Studio: portable projects + per-format batch queue.
+const creatorBatch = [];
+let creatorBatchRunning = false;
+let creatorBatchId = 0;
+let creatorBatchResolve = null;
+let creatorBatchSuccess = false;
+function safeProjectName(value){return String(value||'Clipforge Project').replace(/[\\/:*?"<>|]+/g,'-').trim().slice(0,48)||'Clipforge Project';}
+function selectedBatchFormats(){return [...$('batchFormats').selectedOptions].map(x=>x.value);}
+function renderCreatorBatch(){
+  $('batchSummary').textContent=creatorBatch.length+' job(s) queued · '+creatorBatch.filter(x=>x.status==='done').length+' complete · '+creatorBatch.filter(x=>x.status==='failed').length+' failed';
+  $('batchJobs').innerHTML='';
+  creatorBatch.forEach((job,index)=>{
+    const row=document.createElement('div');row.className='moment';
+    const label=document.createElement('span');label.textContent=(index+1)+'. '+job.name+' · '+job.ratio+' · '+job.start.toFixed(1)+'–'+job.end.toFixed(1)+'s · '+job.status;
+    row.appendChild(label);
+    if(job.downloadUrl){const a=document.createElement('a');a.href=job.downloadUrl;a.download=job.filename;a.className='filebtn';a.textContent='↓ Save MP4';a.style.padding='7px 10px';a.style.fontSize='11px';row.appendChild(a);}
+    else if(!creatorBatchRunning){const remove=document.createElement('button');remove.type='button';remove.className='secondary';remove.textContent='Remove';remove.addEventListener('click',()=>{creatorBatch.splice(index,1);renderCreatorBatch();});row.appendChild(remove);}
+    $('batchJobs').appendChild(row);
+  });
+  $('runBatch').disabled=creatorBatchRunning||!creatorBatch.some(x=>x.status==='queued')||!fileBytesReady;
+  $('clearBatch').disabled=creatorBatchRunning||!creatorBatch.length;
+}
+$('addBatchJobs').addEventListener('click',()=>{
+  if(!selectedFile||!validateTimes())return;
+  const formats=selectedBatchFormats();
+  if(!formats.length){$('batchStatus').textContent='Select at least one output format.';return;}
+  if(creatorBatch.length+formats.length>8){$('batchStatus').textContent='Batch limit is 8 jobs. Run or clear the current batch first.';return;}
+  const base=safeProjectName($('batchName').value);
+  const start=timeValue($('start').value),end=timeValue($('end').value);
+  for(const ratio of formats){
+    creatorBatch.push({id:++creatorBatchId,name:base,filename:base.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-'+ratio.replace(':','x')+'.mp4',start,end,ratio,fit:$('fitMode').value,render:$('renderSize').value,frameX:Number($('frameX').value),frameY:Number($('frameY').value),captions:validSubtitleItems().map(x=>({...x})),animation:$('subtitleAnimation').value,status:'queued',downloadUrl:null});
+  }
+  $('batchStatus').textContent='Added '+formats.length+' format job(s) from the current trim.';
+  renderCreatorBatch();
+});
+$('clearBatch').addEventListener('click',()=>{if(creatorBatchRunning)return;creatorBatch.forEach(x=>{if(x.downloadUrl)URL.revokeObjectURL(x.downloadUrl)});creatorBatch.length=0;$('batchDownloads').innerHTML='';renderCreatorBatch();});
+function waitForCreatorExport(){
+  return new Promise(resolve=>{creatorBatchResolve=resolve;creatorBatchSuccess=false;$('export').click();if(!busy&&!creatorBatchResolve){resolve({ok:false});}});
+}
+$('runBatch').addEventListener('click',async()=>{
+  if(creatorBatchRunning||!fileBytesReady||!creatorBatch.some(x=>x.status==='queued'))return;
+  creatorBatchRunning=true;$('batchDownloads').innerHTML='';renderCreatorBatch();
+  const jobs=creatorBatch.filter(x=>x.status==='queued');
+  try{
+    for(let i=0;i<jobs.length;i++){
+      const job=jobs[i];job.status='exporting';$('batchStatus').textContent='Exporting job '+(i+1)+' of '+jobs.length+'…';renderCreatorBatch();
+      $('start').value=job.start;$('end').value=job.end;
+      $('aspectRatio').value=job.ratio;$('fitMode').value=job.fit;$('renderSize').value=job.render;$('frameX').value=job.frameX;$('frameY').value=job.frameY;
+      $('subtitleAnimation').value=job.animation;subtitleItems=job.captions.map(x=>({...x}));renderSubtitleRows();updateFormatPreview();updateFramePreview();updateButtons();
+      window.__clipforgeActiveFilename=job.filename;
+      const result=await waitForCreatorExport();
+      window.__clipforgeActiveFilename=null;
+      if(result.ok&&$('download').href){
+        job.downloadUrl=$('download').href;job.filename=job.filename;
+        // Keep the generated object URL alive after the next export replaces the main download.
+        outputURL=null;job.status='done';
+      }else{job.status='failed';}
+      renderCreatorBatch();
+    }
+    $('batchStatus').textContent='Batch finished. Save each completed MP4 below. Failed jobs can be retried by adding them again.';
+  }catch(error){$('batchStatus').textContent='Batch stopped: '+(error?.message||String(error));}
+  finally{creatorBatchRunning=false;renderCreatorBatch();updateButtons();}
+});
+$('saveCreatorProject').addEventListener('click',()=>{
+  const project={format:'clipforge-project',version:1,name:safeProjectName($('batchName').value),savedAt:new Date().toISOString(),settings:{start:$('start').value,end:$('end').value,aspectRatio:$('aspectRatio').value,fitMode:$('fitMode').value,renderSize:$('renderSize').value,customWidth:$('customWidth').value,customHeight:$('customHeight').value,frameX:$('frameX').value,frameY:$('frameY').value,subtitleAnimation:$('subtitleAnimation').value,captions:subtitleItems.map(x=>({...x}))},batch:creatorBatch.map(({downloadUrl,...job})=>({...job,downloadUrl:null,status:'queued'})),sourceName:selectedFile?.name||null,sourceSize:selectedFile?.size||null,sourceLastModified:selectedFile?.lastModified||null};
+  const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=project.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.clipforge';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);$('projectStatus').textContent='Project file saved. Re-select the original source video when reopening.';
+});
+$('openCreatorProject').addEventListener('change',async event=>{
+  const file=event.target.files?.[0];event.target.value='';if(!file)return;
+  try{
+    if(file.size>2*1024*1024)throw new Error('Project files must be smaller than 2 MB.');
+    const project=JSON.parse(await file.text());if(project.format!=='clipforge-project'||project.version!==1||!project.settings)throw new Error('This is not a supported Clipforge project file.');
+    const s=project.settings;
+    for(const key of ['start','end','aspectRatio','fitMode','renderSize','customWidth','customHeight','frameX','frameY','subtitleAnimation'])if(s[key]!==undefined&&$(key))$(key).value=s[key];
+    subtitleItems=Array.isArray(s.captions)?s.captions.slice(0,300).map((x,i)=>({id:Number(x.id)||i+1,start:String(x.start??0),end:String(x.end??1),text:String(x.text||'').slice(0,240)})):[];subtitleCounter=subtitleItems.reduce((m,x)=>Math.max(m,x.id),0);renderSubtitleRows();
+    $('batchName').value=safeProjectName(project.name);
+    creatorBatch.forEach(x=>{if(x.downloadUrl)URL.revokeObjectURL(x.downloadUrl)});creatorBatch.length=0;
+    if(Array.isArray(project.batch))for(const raw of project.batch.slice(0,8)){if(!['9:16','1:1','16:9','original'].includes(raw.ratio))continue;creatorBatch.push({...raw,id:++creatorBatchId,start:Number(raw.start)||0,end:Number(raw.end)||1,downloadUrl:null,status:'queued',captions:Array.isArray(raw.captions)?raw.captions.slice(0,300):[]});}
+    updateFormatPreview();updateFramePreview();updateButtons();renderCreatorBatch();
+    $('projectStatus').textContent='Project opened. '+(selectedFile?'Check that the selected source matches '+(project.sourceName||'the saved source')+'.':'Now reselect '+(project.sourceName||'the original video')+' to preview and export.')+' Source media is not embedded.';
+  }catch(error){$('projectStatus').textContent='Could not open project: '+(error?.message||String(error));}
+});
+$('addBatchJobs').disabled=true;
+const creatorSourceObserver=new MutationObserver(()=>{$('addBatchJobs').disabled=!fileBytesReady||!validateTimes();});
+creatorSourceObserver.observe($('filemeta'),{childList:true,subtree:true,characterData:true});
+$('start').addEventListener('input',()=>{$('addBatchJobs').disabled=!fileBytesReady||!validateTimes();});
+$('end').addEventListener('input',()=>{$('addBatchJobs').disabled=!fileBytesReady||!validateTimes();});
+renderCreatorBatch();
+
 $('export').addEventListener('click', async () => {
   if (busy || !validateTimes()) return;
   const fileSnapshot = selectedFile;
@@ -1159,7 +1272,8 @@ $('export').addEventListener('click', async () => {
   const endSnapshot = timeValue($('end').value);
   const exportCaptions = validSubtitleItems().filter(item => Number(item.end) > startSnapshot && Number(item.start) < endSnapshot).map(item => ({text:item.text.trim(),animation:$('subtitleAnimation').value,start:Math.max(0,Number(item.start)-startSnapshot),end:Math.min(endSnapshot,Number(item.end))-startSnapshot})).filter(item => item.text && item.end > item.start);
   let dimensions;
-  try { dimensions = getOutputDimensions(); }
+  let exportSucceeded = false;
+  try { dimensions = getOutputDimensions();
   catch (error) { setStatus(error.message, 'bad'); return; }
   busy = true; stopClipPreview(); updateButtons();
   $('progress').style.display = 'block'; $('progress').value = 0;
@@ -1251,7 +1365,8 @@ $('export').addEventListener('click', async () => {
     outputURL = URL.createObjectURL(new Blob([data], {type:'video/mp4'}));
     $('download').href = outputURL;
     $('download').style.display = 'inline-flex';
-    $('download').download = `clipforge-${Date.now()}.mp4`;
+    $('download').download = window.__clipforgeActiveFilename || `clipforge-${Date.now()}.mp4`;
+    exportSucceeded = true;
     setStatus(`Finished! Your MP4 is ready (${formatBytes(data.length)}).`, 'good');
     try { await ffmpeg.deleteFile(inputName); await ffmpeg.deleteFile(outputName); await ffmpeg.deleteFile('clipforge-font.ttf'); for (const name of subtitleFiles) await ffmpeg.deleteFile(name); } catch {}
   } catch (err) {
@@ -1260,6 +1375,7 @@ $('export').addEventListener('click', async () => {
     setStatus(`Export failed: ${message}. Check your connection, reload the page, and try again.`, 'bad');
   } finally {
     busy = false; updateButtons();
+    if (creatorBatchResolve) { const done = creatorBatchResolve; creatorBatchResolve = null; done({ok:exportSucceeded,href:$('download').href}); }
   }
 });
 
