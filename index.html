@@ -1653,7 +1653,8 @@ window.addEventListener('unhandledrejection', (event) => {
  $('timelineStop').addEventListener('click',stopSequencePlayback);
  $('timelinePlay').addEventListener('click',async()=>{
   if(sequencePlaying||!selectedFile||!sequenceClips.length)return;
-  const token=++sequenceToken;sequencePlaying=true;$('timelinePlay').textContent='Playing sequence…';renderSequenceTimeline();
+  const mismatch=sequenceClips.find(x=>x.sourceName&&x.sourceName!==selectedFile.name);if(mismatch){$('timelineStatus').textContent='This timeline includes clips from '+mismatch.sourceName+'. Re-select that source video before previewing.';return;}
+  stopClipPreview();const token=++sequenceToken;sequencePlaying=true;$('timelinePlay').textContent='Playing sequence…';renderSequenceTimeline();
   try{
    for(let i=0;i<sequenceClips.length;i++){
     if(token!==sequenceToken)return;
@@ -1682,6 +1683,16 @@ window.addEventListener('unhandledrejection', (event) => {
  const projectInput=$('openCreatorProject');
  projectInput.addEventListener('change',async()=>{});
  renderSequenceTimeline();
+ function refreshTimelineAvailability(){
+  $('timelineAdd').disabled=!fileBytesReady||!validateTimes()||sequenceClips.length>=30;
+  $('timelinePlay').disabled=!sequenceClips.length||!selectedFile||sequencePlaying;
+ }
+ source.addEventListener('loadedmetadata',refreshTimelineAvailability);
+ $('filemeta').addEventListener('DOMSubtreeModified',refreshTimelineAvailability);
+ $('start').addEventListener('input',refreshTimelineAvailability);
+ $('end').addEventListener('input',refreshTimelineAvailability);
+ const timelineFileObserver=new MutationObserver(refreshTimelineAvailability);
+ timelineFileObserver.observe($('filemeta'),{childList:true,subtree:true,characterData:true});
 
 </script>
 </body>
