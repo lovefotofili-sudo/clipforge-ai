@@ -1463,8 +1463,8 @@ $('openCreatorProject').addEventListener('change',async event=>{
     if(Array.isArray(project.timeline))for(const raw of project.timeline.slice(0,30)){
       const start=Number(raw.start),end=Number(raw.end),sourceName=String(raw.sourceName||'');
       if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end<=start||end-start>3600)continue;
-      if(selectedFile&&sourceName&&sourceName!==selectedFile.name)continue;
-      sequenceClips.push({id:Date.now()+Math.random(),name:safeProjectName(raw.name||'Timeline clip'),start,end,sourceName});
+      if(selectedFile&&((sourceName&&sourceName!==selectedFile.name)||(Number(raw.sourceSize)>0&&Number(raw.sourceSize)!==selectedFile.size)||(Number(raw.sourceLastModified)>0&&Number(raw.sourceLastModified)!==selectedFile.lastModified)))continue;
+      sequenceClips.push({id:Date.now()+Math.random(),name:safeProjectName(raw.name||'Timeline clip'),start,end,sourceName,sourceSize:Number(raw.sourceSize)||0,sourceLastModified:Number(raw.sourceLastModified)||0});
     }
     renderSequenceTimeline();
     $('projectStatus').textContent='Project opened. '+sequenceClips.length+' timeline clip(s) restored. '+(selectedFile?'Check source duration and filename before exporting.':'Now reselect '+(project.sourceName||'the original video')+' to preview and export.')+' Source media is not embedded.';
@@ -1649,7 +1649,7 @@ window.addEventListener('unhandledrejection', (event) => {
   if(foreign){$('timelineStatus').textContent='This timeline belongs to '+foreign.sourceName+'. Clear it or reselect that source before adding clips from another video.';return;}
   const start=timeValue($('start').value),end=timeValue($('end').value);
   if(end>source.duration+0.05){$('timelineStatus').textContent='The selected trim exceeds the source video duration.';return;}
-  sequenceClips.push({id:Date.now()+Math.random(),name:'Clip '+(sequenceClips.length+1),start,end,sourceName});
+  sequenceClips.push({id:Date.now()+Math.random(),name:'Clip '+(sequenceClips.length+1),start,end,sourceName,sourceSize:selectedFile?.size||0,sourceLastModified:selectedFile?.lastModified||0});
   sequenceSelected=sequenceClips.length-1;renderSequenceTimeline();$('timelineStatus').textContent='Added '+sequenceClips[sequenceSelected].name+'.';
  });
  $('timelineLoad').addEventListener('click',()=>{
@@ -1675,7 +1675,7 @@ window.addEventListener('unhandledrejection', (event) => {
  $('timelineStop').addEventListener('click',stopSequencePlayback);
  $('timelinePlay').addEventListener('click',async()=>{
   if(sequencePlaying||!selectedFile||!sequenceClips.length)return;
-  const mismatch=sequenceClips.find(x=>x.sourceName&&x.sourceName!==selectedFile.name);if(mismatch){$('timelineStatus').textContent='This timeline includes clips from '+mismatch.sourceName+'. Re-select that source video before previewing.';return;}
+  const mismatch=sequenceClips.find(x=>(x.sourceName&&x.sourceName!==selectedFile.name)||(x.sourceSize>0&&x.sourceSize!==selectedFile.size)||(x.sourceLastModified>0&&x.sourceLastModified!==selectedFile.lastModified));if(mismatch){$('timelineStatus').textContent='This timeline contains clips from a different source file ('+(mismatch.sourceName||'saved source')+'). Re-select the original source before previewing.';return;}
   stopClipPreview();const token=++sequenceToken;sequencePlaying=true;$('timelinePlay').textContent='Playing sequence…';renderSequenceTimeline();
   try{
    for(let i=0;i<sequenceClips.length;i++){
@@ -1718,7 +1718,7 @@ window.addEventListener('unhandledrejection', (event) => {
    let total=0;
    sequenceClips.forEach((clip,index)=>{
      if(!Number.isFinite(clip.start)||!Number.isFinite(clip.end)||clip.start<0||clip.end<=clip.start)issues.push('Clip '+(index+1)+' has an invalid time range.');
-     if(selectedFile&&clip.sourceName&&clip.sourceName!==sourceName)issues.push('Clip '+(index+1)+' belongs to a different source video.');
+     if(selectedFile&&((clip.sourceName&&clip.sourceName!==sourceName)||(clip.sourceSize>0&&clip.sourceSize!==selectedFile.size)||(clip.sourceLastModified>0&&clip.sourceLastModified!==selectedFile.lastModified)))issues.push('Clip '+(index+1)+' does not match the currently selected source file.');
      if(selectedFile&&Number.isFinite(source.duration)&&clip.end>source.duration+0.08)issues.push('Clip '+(index+1)+' ends beyond the current source duration.');
      if(clip.end-clip.start<0.35)warnings.push('Clip '+(index+1)+' is very short and may be difficult to notice.');
      total+=Math.max(0,clip.end-clip.start);
