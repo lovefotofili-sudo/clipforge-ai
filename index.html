@@ -295,7 +295,17 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
               <button type="button" class="secondary" id="timelineDown" disabled>Move later →</button>
               <button type="button" id="timelineLoad" disabled>Load into editor</button>
             </div>
-            <p class="modehint">Sequence preview plays selected source ranges in order. Export each segment using the existing batch export tools; a single stitched sequence MP4 is not part of this release.</p>
+            <div class="formatbox" id="sequenceRenderBox" style="margin-top:12px">
+  <div class="smarttitle">SEQUENCE RENDER · V3.6–V3.8</div>
+  <p class="hint">Render the ordered timeline into one MP4. Output framing follows the aspect ratio, framing and render-size settings above.</p>
+  <div class="controls">
+    <label class="field"><span class="formatlabel">Output filename</span><input id="sequenceFilename" maxlength="48" value="clipforge-sequence" autocomplete="off"></label>
+    <label class="field"><span class="formatlabel">Render quality</span><select id="sequenceQuality"><option value="balanced" selected>Balanced · recommended</option><option value="small">Smaller file · faster</option><option value="high">Higher quality · slower</option></select></label>
+  </div>
+  <label class="checkline" style="display:flex;align-items:center;gap:8px;margin-top:10px"><input id="sequenceIncludeAudio" type="checkbox" checked> Keep source audio in the sequence</label>
+  <div class="actions"><button type="button" class="primary" id="sequenceExport" disabled>Export full sequence MP4 ↗</button><button type="button" class="secondary" id="sequenceCheck" disabled>Run timeline checks</button></div>
+  <div class="smartstatus" id="sequenceQC" aria-live="polite">Add clips to run timeline checks and export.</div>
+</div>
             <div class="smartstatus" id="timelineStatus" aria-live="polite">Timeline is empty.</div>
           </div>
             <div class="smarttitle">PORTABLE CREATOR PROJECT</div>
@@ -314,7 +324,7 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
     <button type="button" class="dock-nav" id="dockEdit"><span>✂</span>Edit</button>
     <button type="button" class="dock-export" id="dockExport" disabled>Export MP4 ↗</button>
   </nav>
-  <div class="foot">CLIPFORGE AI · V3.5 · ADVANCED TIMELINE EXPERIENCE</div>
+  <div class="foot">CLIPFORGE AI · V3.8 · SEQUENCE PRODUCTION STUDIO</div>
 </div>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -1402,8 +1412,7 @@ $('addBatchJobs').addEventListener('click',()=>{
   $('batchStatus').textContent='Added '+formats.length+' format job(s) from the current trim.';
   renderCreatorBatch();
 });
-$('clearBatch').addEventListener('click',()=>{if(creatorBatchRunning)return;sequenceClips.length=0;sequenceSelected=-1;if(Array.isArray(project.timeline))for(const raw of project.timeline.slice(0,30)){const start=Number(raw.start),end=Number(raw.end);if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end<=start)continue;sequenceClips.push({id:Date.now()+Math.random(),name:safeProjectName(raw.name||'Timeline clip'),start,end,sourceName:String(raw.sourceName||'')});}renderSequenceTimeline();
-    creatorBatch.forEach(x=>{if(x.downloadUrl)URL.revokeObjectURL(x.downloadUrl)});creatorBatch.length=0;$('batchDownloads').innerHTML='';renderCreatorBatch();});
+$('clearBatch').addEventListener('click',()=>{if(creatorBatchRunning)return;creatorBatch.forEach(x=>{if(x.downloadUrl)URL.revokeObjectURL(x.downloadUrl)});creatorBatch.length=0;$('batchDownloads').innerHTML='';renderCreatorBatch();$('batchStatus').textContent='Batch queue cleared. Timeline clips were not changed.';});
 function waitForCreatorExport(){
   return new Promise(resolve=>{creatorBatchResolve=resolve;creatorBatchSuccess=false;$('export').click();if(!busy&&!creatorBatchResolve){resolve({ok:false});}});
 }
@@ -1450,7 +1459,15 @@ $('openCreatorProject').addEventListener('change',async event=>{
     creatorBatch.forEach(x=>{if(x.downloadUrl)URL.revokeObjectURL(x.downloadUrl)});creatorBatch.length=0;
     if(Array.isArray(project.batch))for(const raw of project.batch.slice(0,8)){if(!['9:16','1:1','16:9','original'].includes(raw.ratio))continue;creatorBatch.push({...raw,id:++creatorBatchId,name:safeProjectName(raw.name),filename:safeProjectName(raw.filename||raw.name).replace(/\\s+/g,'-')+'.mp4',start:Number(raw.start)||0,end:Number(raw.end)||1,downloadUrl:null,status:'queued',captions:Array.isArray(raw.captions)?raw.captions.slice(0,300):[]});}
     updateFormatPreview();updateFramePreview();updateButtons();renderCreatorBatch();
-    $('projectStatus').textContent='Project opened. '+(selectedFile?'Check that the selected source matches '+(project.sourceName||'the saved source')+'.':'Now reselect '+(project.sourceName||'the original video')+' to preview and export.')+' Source media is not embedded.';
+    sequenceClips.length=0;sequenceSelected=-1;
+    if(Array.isArray(project.timeline))for(const raw of project.timeline.slice(0,30)){
+      const start=Number(raw.start),end=Number(raw.end),sourceName=String(raw.sourceName||'');
+      if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end<=start||end-start>3600)continue;
+      if(selectedFile&&sourceName&&sourceName!==selectedFile.name)continue;
+      sequenceClips.push({id:Date.now()+Math.random(),name:safeProjectName(raw.name||'Timeline clip'),start,end,sourceName});
+    }
+    renderSequenceTimeline();
+    $('projectStatus').textContent='Project opened. '+sequenceClips.length+' timeline clip(s) restored. '+(selectedFile?'Check source duration and filename before exporting.':'Now reselect '+(project.sourceName||'the original video')+' to preview and export.')+' Source media is not embedded.';
   }catch(error){$('projectStatus').textContent='Could not open project: '+(error?.message||String(error));}
 });
 $('addBatchJobs').disabled=true;
@@ -1627,8 +1644,12 @@ window.addEventListener('unhandledrejection', (event) => {
  }
  $('timelineAdd').addEventListener('click',()=>{
   if(!validateTimes()||sequenceClips.length>=30)return;
+  const sourceName=selectedFile?.name||'';
+  const foreign=sequenceClips.find(x=>x.sourceName&&x.sourceName!==sourceName);
+  if(foreign){$('timelineStatus').textContent='This timeline belongs to '+foreign.sourceName+'. Clear it or reselect that source before adding clips from another video.';return;}
   const start=timeValue($('start').value),end=timeValue($('end').value);
-  sequenceClips.push({id:Date.now()+Math.random(),name:'Clip '+(sequenceClips.length+1),start,end,sourceName:selectedFile?.name||''});
+  if(end>source.duration+0.05){$('timelineStatus').textContent='The selected trim exceeds the source video duration.';return;}
+  sequenceClips.push({id:Date.now()+Math.random(),name:'Clip '+(sequenceClips.length+1),start,end,sourceName});
   sequenceSelected=sequenceClips.length-1;renderSequenceTimeline();$('timelineStatus').textContent='Added '+sequenceClips[sequenceSelected].name+'.';
  });
  $('timelineLoad').addEventListener('click',()=>{
@@ -1681,6 +1702,127 @@ window.addEventListener('unhandledrejection', (event) => {
  $('end').addEventListener('input',refreshTimelineAvailability);
  const timelineFileObserver=new MutationObserver(refreshTimelineAvailability);
  timelineFileObserver.observe($('filemeta'),{childList:true,subtree:true,characterData:true});
+
+
+ // V3.6–V3.8: sequence rendering, timeline validation and render controls.
+ const sequenceExportButton=$('sequenceExport');
+ const sequenceQCBox=$('sequenceQC');
+ let sequenceRenderBusy=false;
+ const safeSequenceFilename=value=>String(value||'clipforge-sequence').replace(/[^a-z0-9_-]+/gi,'-').replace(/^-+|-+$/g,'').slice(0,48)||'clipforge-sequence';
+ function checkSequenceTimeline(){
+   const issues=[],warnings=[];
+   if(!selectedFile||!fileBytesReady||!selectedFileBytes)issues.push('Select a source video and wait until it is ready.');
+   if(!sequenceClips.length)issues.push('Add at least one clip to the timeline.');
+   if(sequenceClips.length>30)issues.push('The timeline exceeds the 30-clip limit.');
+   const sourceName=selectedFile?.name||'';
+   let total=0;
+   sequenceClips.forEach((clip,index)=>{
+     if(!Number.isFinite(clip.start)||!Number.isFinite(clip.end)||clip.start<0||clip.end<=clip.start)issues.push('Clip '+(index+1)+' has an invalid time range.');
+     if(selectedFile&&clip.sourceName&&clip.sourceName!==sourceName)issues.push('Clip '+(index+1)+' belongs to a different source video.');
+     if(selectedFile&&Number.isFinite(source.duration)&&clip.end>source.duration+0.08)issues.push('Clip '+(index+1)+' ends beyond the current source duration.');
+     if(clip.end-clip.start<0.35)warnings.push('Clip '+(index+1)+' is very short and may be difficult to notice.');
+     total+=Math.max(0,clip.end-clip.start);
+     if(index&&Math.abs(clip.start-sequenceClips[index-1].start)<0.04&&Math.abs(clip.end-sequenceClips[index-1].end)<0.04)warnings.push('Clips '+index+' and '+(index+1)+' are duplicates.');
+   });
+   if(total>600)warnings.push('The sequence is over 10 minutes; browser memory and render time may be significant.');
+   if(selectedFileBytes&&selectedFileBytes.byteLength>220*1024*1024)warnings.push('The source file is large. Mobile browsers may run out of memory during rendering.');
+   return {ok:issues.length===0,issues,warnings,total};
+ }
+ function paintSequenceQC(){
+   const result=checkSequenceTimeline();
+   const lines=[];
+   if(result.ok)lines.push('✓ Timeline checks passed · '+sequenceClips.length+' clips · '+result.total.toFixed(1)+' seconds');
+   else lines.push('Fix before export: '+result.issues.join(' '));
+   if(result.warnings.length)lines.push('Warnings: '+result.warnings.join(' '));
+   if(result.ok&&!result.warnings.length)lines.push('No timeline issues detected.');
+   sequenceQCBox.textContent=lines.join(' ');
+   sequenceExportButton.disabled=!result.ok||sequenceRenderBusy||busy||creatorBatchRunning;
+   $('sequenceCheck').disabled=!sequenceClips.length||sequenceRenderBusy;
+   return result;
+ }
+ const baseRenderSequenceTimeline=renderSequenceTimeline;
+ renderSequenceTimeline=function(){baseRenderSequenceTimeline();paintSequenceQC();};
+ $('sequenceCheck').addEventListener('click',()=>{const r=paintSequenceQC();$('timelineStatus').textContent=r.ok?'Timeline checks passed.':r.issues.join(' ');});
+ sequenceExportButton.addEventListener('click',async()=>{
+   if(sequenceRenderBusy||busy||creatorBatchRunning)return;
+   const check=paintSequenceQC();
+   if(!check.ok){$('timelineStatus').textContent=check.issues.join(' ');return;}
+   let dimensions;
+   try{dimensions=getOutputDimensions();}catch(error){sequenceQCBox.textContent=error.message;return;}
+   const clips=sequenceClips.map(x=>({...x}));
+   const includeAudio=$('sequenceIncludeAudio').checked;
+   const quality=$('sequenceQuality').value;
+   const filename=safeSequenceFilename($('sequenceFilename').value)+'.mp4';
+   const inputExt=(selectedFile.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp4';
+   const inputName='clipforge-sequence-input.'+inputExt,outputName='clipforge-sequence-output.mp4';
+   sequenceRenderBusy=true;stopClipPreview();stopSequencePlayback();sequenceExportButton.disabled=true;
+   $('sequenceCheck').disabled=true;$('progress').style.display='block';$('progress').value=0;$('download').style.display='none';
+   let wroteInput=false;
+   try{
+     await loadEngine();
+     if(!fileBytesReady||!selectedFileBytes)throw new Error('The source video is no longer available. Select it again and retry.');
+     $('timelineStatus').textContent='Preparing source video for sequence rendering…';
+     await ffmpeg.writeFile(inputName,selectedFileBytes.slice());wroteInput=true;
+     let hasAudio=false;
+     if(includeAudio){
+       const probeMessages=[];
+       const probeListener=({message})=>probeMessages.push(String(message||''));
+       ffmpeg.on('log',probeListener);
+       try{await ffmpeg.ffprobe(['-v','error','-select_streams','a:0','-show_entries','stream=codec_type','-of','csv=p=0',inputName]);}
+       finally{if(typeof ffmpeg.off==='function')ffmpeg.off('log',probeListener);}
+       hasAudio=probeMessages.some(line=>line.trim().toLowerCase()==='audio');
+     }
+     if(includeAudio&&!hasAudio)sequenceQCBox.textContent='No audio track found; exporting video only.';
+     const graph=[],videoLabels=[],audioLabels=[];
+     let outputDims=dimensions?getRenderDimensions(dimensions):null;
+     const mode=$('fitMode').value,cropX=$('frameX').value,cropY=$('frameY').value;
+     clips.forEach((clip,index)=>{
+       let vf='';
+       if(outputDims){
+         if(mode==='stretch')vf='scale='+outputDims.width+':'+outputDims.height+',setsar=1';
+         else if(mode==='fit')vf='scale='+outputDims.width+':'+outputDims.height+':force_original_aspect_ratio=decrease,pad='+outputDims.width+':'+outputDims.height+':(ow-iw)/2:(oh-ih)/2:black,setsar=1';
+         else vf='scale='+outputDims.width+':'+outputDims.height+':force_original_aspect_ratio=increase,crop='+outputDims.width+':'+outputDims.height+':(iw-ow)*'+cropX+'/100:(ih-oh)*'+cropY+'/100,setsar=1';
+       }
+       const vlabel='v'+index,alabel='a'+index;
+       graph.push('[0:v:0]trim=start='+clip.start.toFixed(3)+':end='+clip.end.toFixed(3)+',setpts=PTS-STARTPTS'+(vf?','+vf:'')+'['+vlabel+']');
+       videoLabels.push('['+vlabel+']');
+       if(hasAudio){
+         graph.push('[0:a:0]atrim=start='+clip.start.toFixed(3)+':end='+clip.end.toFixed(3)+',asetpts=PTS-STARTPTS,aresample=48000,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo['+alabel+']');
+         audioLabels.push('['+alabel+']');
+       }
+     });
+     if(hasAudio)graph.push(videoLabels.join('')+audioLabels.join('')+'concat=n='+clips.length+':v=1:a=1[vout][aout]');
+     else graph.push(videoLabels.join('')+'concat=n='+clips.length+':v=1:a=0[vout]');
+     const crf=quality==='small'?'27':quality==='high'?'20':'23';
+     $('timelineStatus').textContent='Rendering '+clips.length+' clips into one MP4… keep this tab open.';
+     const args=['-i',inputName,'-filter_complex',graph.join(';'),'-map','[vout]'];
+     if(hasAudio)args.push('-map','[aout]','-c:a','aac','-b:a','160k');
+     args.push('-c:v','libx264','-preset','ultrafast','-crf',crf,'-pix_fmt','yuv420p','-movflags','+faststart','-threads','2','-sn','-dn',outputName);
+     const exitCode=await ffmpeg.exec(args);
+     if(exitCode!==0)throw new Error('The sequence render did not finish. Try fewer or shorter clips, or use a smaller source video.');
+     const data=await ffmpeg.readFile(outputName);
+     if(!data||!data.length)throw new Error('The renderer returned an empty MP4.');
+     if(outputURL)URL.revokeObjectURL(outputURL);
+     outputURL=URL.createObjectURL(new Blob([data],{type:'video/mp4'}));
+     $('download').href=outputURL;$('download').download=filename;$('download').style.display='inline-flex';
+     setStatus('Sequence export complete · '+formatBytes(data.length),'good');
+     sequenceQCBox.textContent='Finished · '+clips.length+' clips · '+check.total.toFixed(1)+' seconds · '+formatBytes(data.length)+' · '+(hasAudio?'source audio included':'video only');
+     $('timelineStatus').textContent='Your stitched sequence MP4 is ready. Use the Download MP4 link below.';
+   }catch(error){
+     console.error('[CLIPFORGE sequence render]',error);
+     sequenceQCBox.textContent='Sequence export failed: '+(error?.message||String(error));
+     $('timelineStatus').textContent='Sequence export failed. Your timeline is still saved in this session.';
+     setStatus('Sequence export failed: '+(error?.message||String(error)),'bad');
+   }finally{
+     try{if(wroteInput)await ffmpeg.deleteFile(inputName);await ffmpeg.deleteFile(outputName);}catch{}
+     sequenceRenderBusy=false;paintSequenceQC();updateButtons();
+   }
+ });
+ const sequenceSourceObserver=new MutationObserver(()=>paintSequenceQC());
+ sequenceSourceObserver.observe($('filemeta'),{childList:true,subtree:true,characterData:true});
+ source.addEventListener('loadedmetadata',paintSequenceQC);
+ $('sequenceFilename').addEventListener('input',()=>{if(!$('sequenceFilename').value.trim())$('sequenceFilename').value='clipforge-sequence';});
+ paintSequenceQC();
 
 </script>
 </body>
