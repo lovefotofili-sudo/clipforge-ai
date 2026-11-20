@@ -1221,7 +1221,9 @@ $('runBatch').addEventListener('click',async()=>{
   const jobs=creatorBatch.filter(x=>x.status==='queued');
   try{
     for(let i=0;i<jobs.length;i++){
-      const job=jobs[i];job.status='exporting';$('batchStatus').textContent='Exporting job '+(i+1)+' of '+jobs.length+'…';renderCreatorBatch();
+      const job=jobs[i];
+      if(job.end>source.duration||job.start<0||job.end<=job.start){job.status='failed';$('batchStatus').textContent='Skipped '+job.filename+': its trim does not fit the currently selected source video.';renderCreatorBatch();continue;}
+      job.status='exporting';$('batchStatus').textContent='Exporting job '+(i+1)+' of '+jobs.length+'…';renderCreatorBatch();
       $('start').value=job.start;$('end').value=job.end;
       $('aspectRatio').value=job.ratio;$('fitMode').value=job.fit;$('renderSize').value=job.render;$('frameX').value=job.frameX;$('frameY').value=job.frameY;
       $('subtitleAnimation').value=job.animation;subtitleItems=job.captions.map(x=>({...x}));renderSubtitleRows();updateFormatPreview();updateFramePreview();updateButtons();
@@ -1253,7 +1255,7 @@ $('openCreatorProject').addEventListener('change',async event=>{
     subtitleItems=Array.isArray(s.captions)?s.captions.slice(0,300).map((x,i)=>({id:Number(x.id)||i+1,start:String(x.start??0),end:String(x.end??1),text:String(x.text||'').slice(0,240)})):[];subtitleCounter=subtitleItems.reduce((m,x)=>Math.max(m,x.id),0);renderSubtitleRows();
     $('batchName').value=safeProjectName(project.name);
     creatorBatch.forEach(x=>{if(x.downloadUrl)URL.revokeObjectURL(x.downloadUrl)});creatorBatch.length=0;
-    if(Array.isArray(project.batch))for(const raw of project.batch.slice(0,8)){if(!['9:16','1:1','16:9','original'].includes(raw.ratio))continue;creatorBatch.push({...raw,id:++creatorBatchId,start:Number(raw.start)||0,end:Number(raw.end)||1,downloadUrl:null,status:'queued',captions:Array.isArray(raw.captions)?raw.captions.slice(0,300):[]});}
+    if(Array.isArray(project.batch))for(const raw of project.batch.slice(0,8)){if(!['9:16','1:1','16:9','original'].includes(raw.ratio))continue;creatorBatch.push({...raw,id:++creatorBatchId,name:safeProjectName(raw.name),filename:safeProjectName(raw.filename||raw.name).replace(/\\s+/g,'-')+'.mp4',start:Number(raw.start)||0,end:Number(raw.end)||1,downloadUrl:null,status:'queued',captions:Array.isArray(raw.captions)?raw.captions.slice(0,300):[]});}
     updateFormatPreview();updateFramePreview();updateButtons();renderCreatorBatch();
     $('projectStatus').textContent='Project opened. '+(selectedFile?'Check that the selected source matches '+(project.sourceName||'the saved source')+'.':'Now reselect '+(project.sourceName||'the original video')+' to preview and export.')+' Source media is not embedded.';
   }catch(error){$('projectStatus').textContent='Could not open project: '+(error?.message||String(error));}
