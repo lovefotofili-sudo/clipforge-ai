@@ -138,7 +138,7 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V4.3 · SMART DISCOVERY STUDIO</span>
+    <span class="badge">V5.3 · CLIPPING ENGINE</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -183,7 +183,7 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
           <div class="field"><label for="end">End time (seconds)</label><input id="end" type="number" min="0" step="0.1" value="10" placeholder="e.g. 9" inputmode="decimal"></div>
         </div>
         <p class="hint">Enter seconds only (for example, 3 and 9 — no colon). Or pause the preview and use “Set start” or “Set end”.</p>
-        <div class="smartbox"><div class="smarttitle">✦ SMART MOMENT DISCOVERY · V4.3</div><p class="smartdesc">Ranks promising moments using motion, sustained activity, local bursts, visual detail and scene changes. Results include a score and can be sent straight to your timeline. This is visual-signal analysis, not story or subject recognition.</p><div class="formatrow three" style="margin-bottom:10px"><div><label class="formatlabel" for="momentScanMode">Scan detail</label><select id="momentScanMode"><option value="quick">Quick · mobile friendly</option><option value="balanced" selected>Balanced · recommended</option><option value="deep">Deep · slower</option></select></div><div><label class="formatlabel" for="momentResultCount">Suggestions</label><select id="momentResultCount"><option value="3">Top 3</option><option value="5" selected>Top 5</option></select></div></div><div class="actions" style="margin-top:0"><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><button type="button" class="secondary" id="cancelMomentScan" disabled>Cancel scan</button></div><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div></div>
+        <div class="smartbox"><div class="smarttitle">✦ CLIPFORGE CLIPPING ENGINE · V5.3</div><p class="smartdesc">Ranks visual activity, filters repetitive moments, and can use captions already in your project to flag likely hooks and endings. Caption cues are heuristic, not semantic understanding.</p><div class="formatrow three" style="margin-bottom:10px"><div><label class="formatlabel" for="momentScanMode">Scan detail</label><select id="momentScanMode"><option value="quick">Quick · mobile friendly</option><option value="balanced" selected>Balanced · recommended</option><option value="deep">Deep · slower</option></select></div><div><label class="formatlabel" for="momentResultCount">Suggestions</label><select id="momentResultCount"><option value="3">Top 3</option><option value="5" selected>Top 5</option><option value="8">Top 8</option></select></div></div><div class="actions" style="margin-top:0"><button type="button" class="smartbtn" id="findMoments" disabled>✦ Find best moments</button><button type="button" class="secondary" id="cancelMomentScan" disabled>Cancel scan</button><button type="button" class="secondary" id="addAllMoments" disabled>＋ Add all to timeline</button></div><div class="smartstatus" id="smartStatus" aria-live="polite">Upload a video to scan it.</div><div class="momentlist" id="momentList"></div></div>
         <div class="clip-preview-panel">
           <div><div class="smarttitle">▶ CLIP PREVIEW</div><p class="preview-help">Preview your selected start and end times here. Output ratio and framing settings are separate below.</p></div>
           <button type="button" class="secondary previewclipbtn" id="previewClip" disabled>▶ Preview selected clip</button>
@@ -901,8 +901,12 @@ function seekForScan(time) {
 async function findBestMoments() {
   if (!selectedFile || !Number.isFinite(source.duration) || momentScanBusy) return;
   momentScanBusy = true;
+  momentScanCancelRequested = false;
+  $('cancelMomentScan').disabled = false;
+  $('addAllMoments').disabled = true;
   $('findMoments').disabled = true;
   $('momentList').innerHTML = '';
+  $('addAllMoments').disabled = true;
   $('smartStatus').textContent = 'Analysing sustained activity, action bursts and scene changes… keep this tab open.';
   const originalTime = source.currentTime;
   const wasPlaying = !source.paused;
@@ -910,7 +914,7 @@ async function findBestMoments() {
   try {
     const duration = source.duration;
     const scanMode=$('momentScanMode')?.value||'balanced';
-    const targetSamples=scanMode==='quick'?36:scanMode==='deep'?120:72;
+    const targetSamples=scanMode==='quick'?30:scanMode==='deep'?100:60;
     const step = Math.max(0.75, duration / targetSamples);
     const width = 64, height = 36;
     const canvas = document.createElement('canvas');
@@ -919,8 +923,13 @@ async function findBestMoments() {
     if (!ctx) throw new Error('This browser could not start the video analyser.');
     const samples = [];
     let previous = null;
+    const captionItems = (typeof subtitleItems !== 'undefined' && Array.isArray(subtitleItems)) ? subtitleItems.filter(x=>String(x.text||'').trim()) : [];
+    const hookPattern = /\b(wait|watch|look|here.?s|why|how|secret|finally|impossible|never|first|last|biggest|reveal|you won.?t believe)\b/i;
+    const endingPattern = /\b(that.?s it|that.?s all|in the end|we did it|the end|thanks for watching|conclusion|finally|done)\b/i;
     for (let t = 0; t < duration - 0.05; t += step) {
+      if(momentScanCancelRequested) throw new Error('Scan cancelled.');
       await seekForScan(t);
+      if(momentScanCancelRequested) throw new Error('Scan cancelled.');
       ctx.drawImage(source, 0, 0, width, height);
       const rgba = ctx.getImageData(0, 0, width, height).data;
       const gray = new Float32Array(width * height);
@@ -1013,12 +1022,17 @@ async function findBestMoments() {
         const chaosPenalty = Math.max(0, activitySpread - Math.max(1.2, avgActivity*1.55)) * 0.14;
         const cutPenalty = Math.max(0, sceneEvents - 4) * 0.16;
         const lowSignalPenalty = avgActivity < 1.1 ? (1.1 - avgActivity)*0.8 : 0;
+        const windowCaptions = captionItems.filter(item=>Number(item.end)>start && Number(item.start)<start+clipLength);
+        const captionText = windowCaptions.map(item=>String(item.text||'')).join(' ').slice(0,1200);
+        const hasHookCue = windowCaptions.some(item=>Number(item.start)<=start+Math.max(1,clipLength*0.28) && hookPattern.test(String(item.text||'')));
+        const hasEndingCue = windowCaptions.some(item=>endingPattern.test(String(item.text||'')));
+        const captionBoost = captionText ? (hasHookCue?0.85:0)+(hasEndingCue?0.55:0)+Math.min(0.35,windowCaptions.length*0.06) : 0;
         // Prefer windows that rise above this video's own typical activity, not merely busy footage.
         const relativeLift = Math.max(-1, Math.min(1.5, (avgActivity-globalActivityBaseline)/Math.max(1.5,globalActivityBaseline)));
         const score = sustained*0.46 + avgActivity*0.10 + burst*0.14 + relativeLift*0.45
           + Math.min(burstProminence,10)*0.18 + burstDensity*0.55
           + consistency*1.05 + Math.min(sceneEvents,3)*0.16
-          + Math.min(visualDetail/22,3)*0.20
+          + Math.min(visualDetail/22,3)*0.20 + captionBoost
           - chaosPenalty - cutPenalty - lowSignalPenalty;
         // Give the action room to finish: add a little lead-in, then follow activity past
         // the nominal window until it settles, with a bounded extension for phone performance.
@@ -1044,7 +1058,7 @@ async function findBestMoments() {
           if (quietSamples >= 3) break;
         }
         clipEnd = Math.max(clipEnd, Math.min(duration, lastActiveTime + completionPadding));
-        candidates.push({start:clipStart,end:Math.max(clipStart+clipLength*0.55,clipEnd),score,clipLength,activeRatio,peakCount});
+        candidates.push({start:clipStart,end:Math.max(clipStart+clipLength*0.55,clipEnd),score,clipLength,activeRatio,peakCount,hasHookCue,hasEndingCue,captionCount:windowCaptions.length});
       }
     }
     candidates.sort((a,b)=>b.score-a.score);
@@ -1072,9 +1086,10 @@ async function findBestMoments() {
       $('smartStatus').textContent = 'No strong visual activity was detected. Try another video or set the trim points manually.';
     } else {
       $('smartStatus').textContent = 'Done. Ranked by sustained activity and distinct bursts; near-duplicate moments were filtered where possible. Clip endings allow a longer quiet period before treating the action as finished. This is visual analysis, not story understanding.';
+      $('addAllMoments').disabled = false;
       $('momentList').innerHTML = chosen.map((m,i)=>{
         const score=Math.max(0,Math.min(100,Math.round((m.score/Math.max(4,globalActivityBaseline*2+4))*100)));
-        const reason=m.peakCount>=3?'Multiple action bursts':m.activeRatio>=0.55?'Sustained activity':'Strong visual activity';
+        const reason=m.hasHookCue?'Possible hook cue':m.hasEndingCue?'Possible ending cue':m.peakCount>=3?'Multiple action bursts':m.activeRatio>=0.55?'Sustained activity':'Strong visual activity';
         return '<div class="moment"><span><strong>Moment '+(i+1)+' · '+m.start.toFixed(1)+'s–'+Math.min(duration,m.end).toFixed(1)+'s</strong><br><small>'+score+'/100 signal score · '+reason+'</small></span><span style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" data-moment="'+i+'">Use</button><button type="button" class="secondary" data-add-moment="'+i+'">＋ Timeline</button></span></div>';
       }).join('');
       [...$('momentList').querySelectorAll('[data-moment]')].forEach(button=>{
@@ -1087,6 +1102,18 @@ async function findBestMoments() {
           source.currentTime=m.start;
         });
       });
+      $('addAllMoments').onclick=()=>{
+        let added=0;
+        for(const m of chosen){
+          if(sequenceClips.length>=30) break;
+          const label=m.hasHookCue?'Hook':m.hasEndingCue?'Ending':'Highlight';
+          sequenceClips.push({id:Date.now()+Math.random(),name:label+' '+(sequenceClips.length+1),start:m.start,end:Math.min(duration,m.end),sourceName:selectedFile.name,sourceSize:selectedFile.size||0,sourceLastModified:selectedFile.lastModified||0});
+          added++;
+        }
+        if(added){sequenceSelected=sequenceClips.length-1;renderSequenceTimeline();$('smartStatus').textContent='Added '+added+' ranked highlights to timeline.';}
+        else $('smartStatus').textContent='Timeline is full (30 clips). Remove a segment first.';
+        $('addAllMoments').disabled=true;
+      };
       [...$('momentList').querySelectorAll('[data-add-moment]')].forEach(button=>{
         button.addEventListener('click',()=>{
           const m=chosen[Number(button.dataset.addMoment)];
@@ -1105,6 +1132,7 @@ async function findBestMoments() {
     if (wasPlaying) source.play().catch(()=>{});
     momentScanBusy=false;
     $('findMoments').disabled=!selectedFile;
+    $('cancelMomentScan').disabled=true;
   }
 }
 $('findMoments').addEventListener('click', findBestMoments);
