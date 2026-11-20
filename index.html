@@ -138,7 +138,7 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo">✂</div><span>CLIPFORGE <span style="color:#b995ff">AI</span></span></div>
-    <span class="badge">V5.3 · CLIPPING ENGINE</span>
+    <span class="badge">V1.0 RC2 · EXPORT RELIABILITY</span>
   </header>
   <main>
     <div class="step">YOUR VIDEO WORKSPACE</div>
@@ -324,7 +324,7 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
     <button type="button" class="dock-nav" id="dockEdit"><span>✂</span>Edit</button>
     <button type="button" class="dock-export" id="dockExport" disabled>Export MP4 ↗</button>
   </nav>
-  <div class="foot">CLIPFORGE AI · V4.3 · SMART DISCOVERY STUDIO</div>
+  <div class="foot">CLIPFORGE AI · V1.0 RC2 · RELEASE CANDIDATE</div>
 </div>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -358,6 +358,7 @@ async function toBlobURL(url, mimeType, label, onProgress) {
   return URL.createObjectURL(new Blob(chunks, {type:mimeType}));
 }
 let selectedFile = null, selectedFileBytes = null, fileBytesReady = false, sourceURL = null, outputURL = null;
+let fileSnapshotReader = null;
 let metadataTimer = null, fileReaderFallbackTried = false, loadAttempt = 0;
 
 function setStatus(message, kind='') {
@@ -373,7 +374,7 @@ function validateTimes() {
 function updateButtons() {
   if (typeof enableAutoTranscribe === 'function') enableAutoTranscribe();
   $('findMoments').disabled = busy || momentScanBusy || !selectedFile || !Number.isFinite(source.duration);
-  $('export').disabled = busy || !fileBytesReady || !validateTimes();
+  $('export').disabled = busy || sequenceRenderBusy || !fileBytesReady || !validateTimes();
   $('setStart').disabled = busy || !selectedFile;
   $('setEnd').disabled = busy || !selectedFile;
   $('previewClip').disabled = busy || !selectedFile || !validateTimes();
@@ -435,6 +436,7 @@ function useFile(file) {
     return;
   }
   const attempt = ++loadAttempt;
+  if (fileSnapshotReader) { try { fileSnapshotReader.abort(); } catch {} fileSnapshotReader = null; }
   clearMediaLoadTimer();
   fileReaderFallbackTried = false;
   selectedFile = file;
@@ -442,22 +444,43 @@ function useFile(file) {
   $('youtubeHelp').textContent = `Selected: ${file.name}. Your original video is ready for Best Moment Finder and MP4 export.`;
   selectedFileBytes = null;
   fileBytesReady = false;
-  // Snapshot the phone-selected file immediately, while Android's file permission is fresh.
-  // Export must use these bytes rather than reopening the original File after FFmpeg loads.
-  file.arrayBuffer().then(buffer => {
+  // Snapshot the selected file while its browser file permission is active.
+  // FileReader exposes progress and can be aborted when a different file is selected.
+  const reader = new FileReader();
+  fileSnapshotReader = reader;
+  reader.onprogress = event => {
+    if (attempt !== loadAttempt || selectedFile !== file || !event.lengthComputable) return;
+    setStatus('Preparing video for export… ' + Math.round(event.loaded / event.total * 100) + '%');
+  };
+  reader.onload = () => {
     if (attempt !== loadAttempt || selectedFile !== file) return;
-    selectedFileBytes = new Uint8Array(buffer);
-    fileBytesReady = true;
-    if (Number.isFinite(source.duration) && source.duration > 0) {
-      setStatus('Video ready. Choose your trim and export when ready.', 'good');
+    if (!(reader.result instanceof ArrayBuffer) || !reader.result.byteLength) {
+      setStatus('The selected video could not be read. Choose it again and retry.', 'bad');
+      return;
     }
+    selectedFileBytes = new Uint8Array(reader.result);
+    fileBytesReady = true;
+    fileSnapshotReader = null;
+    const sizeWarning = file.size > 220 * 1024 * 1024
+      ? ' This is a large file; mobile browsers may run short of memory during export.'
+      : '';
+    setStatus('Source video prepared for export.' + sizeWarning, 'good');
     updateButtons();
-  }).catch(error => {
+  };
+  reader.onerror = () => {
     if (attempt !== loadAttempt || selectedFile !== file) return;
-    console.error('[CLIPFORGE file snapshot error]', error);
-    setStatus('Could not prepare this video for export. Please select it again.', 'bad');
+    fileSnapshotReader = null;
+    console.error('[CLIPFORGE file snapshot error]', reader.error);
+    setStatus('Could not prepare this video for export. Choose the file again and retry.', 'bad');
     updateButtons();
-  });
+  };
+  reader.onabort = () => {
+    if (attempt !== loadAttempt || selectedFile !== file) return;
+    fileSnapshotReader = null;
+    setStatus('Video preparation was interrupted. Choose the file again and retry.', 'bad');
+    updateButtons();
+  };
+  reader.readAsArrayBuffer(file);
   $('ytPreview').style.display = 'none';
   $('ytPreview').src = '';
   $('linknotice').style.display = 'none';
@@ -1562,13 +1585,16 @@ renderCreatorBatch();
 renderClipProfiles();
 
 $('export').addEventListener('click', async () => {
-  if (busy || !validateTimes()) return;
+  if (busy || sequenceRenderBusy || !validateTimes()) return;
   const fileSnapshot = selectedFile;
+  const bytesSnapshot = fileBytesReady && selectedFileBytes ? selectedFileBytes : null;
+  if (!bytesSnapshot) { setStatus('The source video is still being prepared. Wait for preparation to finish, then export.', 'bad'); return; }
   const startSnapshot = timeValue($('start').value);
   const endSnapshot = timeValue($('end').value);
   const exportCaptions = validSubtitleItems().filter(item => Number(item.end) > startSnapshot && Number(item.start) < endSnapshot).map(item => ({text:item.text.trim(),animation:$('subtitleAnimation').value,start:Math.max(0,Number(item.start)-startSnapshot),end:Math.min(endSnapshot,Number(item.end))-startSnapshot})).filter(item => item.text && item.end > item.start);
   let dimensions;
   let exportSucceeded = false;
+  const cleanupPaths = [];
   try { dimensions = getOutputDimensions(); }
   catch (error) { setStatus(error.message, 'bad'); if (creatorBatchResolve) { const done=creatorBatchResolve; creatorBatchResolve=null; done({ok:false}); } return; }
   busy = true; stopClipPreview(); updateButtons();
@@ -1578,10 +1604,11 @@ $('export').addEventListener('click', async () => {
     await loadEngine();
     setStatus('Preparing your video…');
     const ext = (fileSnapshot.name.split('.').pop() || 'mp4').toLowerCase().replace(/[^a-z0-9]/g,'') || 'mp4';
-    const inputName = `input.${ext}`;
-    const outputName = 'clipforge-output.mp4';
-    if (!fileBytesReady || !selectedFileBytes) throw new Error('The selected video is not ready for export yet. Select it again and wait for the video to finish preparing.');
-    await ffmpeg.writeFile(inputName, selectedFileBytes.slice());
+    const exportKey = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+    const inputName = `clipforge-input-${exportKey}.${ext}`;
+    const outputName = `clipforge-output-${exportKey}.mp4`;
+    cleanupPaths.push(inputName, outputName);
+    await ffmpeg.writeFile(inputName, bytesSnapshot.slice());
     const start = startSnapshot;
     const length = endSnapshot - startSnapshot;
     let exitCode = 1;
@@ -1591,6 +1618,7 @@ $('export').addEventListener('click', async () => {
       setStatus('Preparing subtitles for MP4 burn-in…');
       const fontBytes = await loadSubtitleFont();
       await ffmpeg.writeFile('clipforge-font.ttf', fontBytes.slice());
+      cleanupPaths.push('clipforge-font.ttf');
       const drawFilters = [];
       for (let i = 0; i < exportCaptions.length; i++) {
         const caption = exportCaptions[i];
@@ -1603,6 +1631,7 @@ $('export').addEventListener('click', async () => {
           const textName = 'clipforge-caption-' + i + '-' + j + '.txt';
           await ffmpeg.writeFile(textName, new TextEncoder().encode(wrapSubtitleText(stages[j])));
           subtitleFiles.push(textName);
+          cleanupPaths.push(textName);
           const a = (caption.start + stageDuration * j).toFixed(3);
           const b = (j === stages.length - 1 ? caption.end : caption.start + stageDuration * (j + 1)).toFixed(3);
           drawFilters.push("drawtext=fontfile=clipforge-font.ttf:textfile=" + textName + ":fontcolor=white:fontsize=h*0.035:borderw=2:bordercolor=black:box=1:boxcolor=black@0.55:boxborderw=9:line_spacing=8:x=(w-text_w)/2:y=h-text_h-h*0.07:enable='between(t," + a + "," + b + ")'");
@@ -1657,6 +1686,7 @@ $('export').addEventListener('click', async () => {
     }
     if (exitCode !== 0) throw new Error('Export failed. Try a shorter video or choose Original video format.');
     const data = await ffmpeg.readFile(outputName);
+    if (!data || !data.length) throw new Error('The renderer returned an empty MP4.');
     if (outputURL) URL.revokeObjectURL(outputURL);
     outputURL = URL.createObjectURL(new Blob([data], {type:'video/mp4'}));
     $('download').href = outputURL;
@@ -1664,12 +1694,14 @@ $('export').addEventListener('click', async () => {
     $('download').download = window.__clipforgeActiveFilename || `clipforge-${Date.now()}.mp4`;
     exportSucceeded = true;
     setStatus(`Finished! Your MP4 is ready (${formatBytes(data.length)}).`, 'good');
-    try { await ffmpeg.deleteFile(inputName); await ffmpeg.deleteFile(outputName); await ffmpeg.deleteFile('clipforge-font.ttf'); for (const name of subtitleFiles) await ffmpeg.deleteFile(name); } catch {}
   } catch (err) {
     console.error('[CLIPFORGE export error]', err);
     const message = err?.message || String(err);
     setStatus(`Export failed: ${message}. Check your connection, reload the page, and try again.`, 'bad');
   } finally {
+    if (ffmpeg) {
+      for (const path of cleanupPaths) { try { await ffmpeg.deleteFile(path); } catch {} }
+    }
     busy = false; updateButtons();
     if (creatorBatchResolve) { const done = creatorBatchResolve; creatorBatchResolve = null; done({ok:exportSucceeded,href:$('download').href}); }
   }
@@ -1836,16 +1868,18 @@ window.addEventListener('unhandledrejection', (event) => {
    const includeAudio=$('sequenceIncludeAudio').checked;
    const quality=$('sequenceQuality').value;
    const filename=safeSequenceFilename($('sequenceFilename').value)+'.mp4';
-   const inputExt=(selectedFile.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp4';
+   const sourceFileSnapshot=selectedFile;
+   const sourceBytesSnapshot=fileBytesReady&&selectedFileBytes?selectedFileBytes:null;
+   if(!sourceFileSnapshot||!sourceBytesSnapshot)throw new Error('The source video is still being prepared. Wait for preparation to finish, then retry.');
+   const inputExt=(sourceFileSnapshot.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp4';
    const inputName='clipforge-sequence-input.'+inputExt,outputName='clipforge-sequence-output.mp4';
-   sequenceRenderBusy=true;stopClipPreview();stopSequencePlayback();sequenceExportButton.disabled=true;
+   sequenceRenderBusy=true;stopClipPreview();stopSequencePlayback();sequenceExportButton.disabled=true;updateButtons();
    $('sequenceCheck').disabled=true;$('progress').style.display='block';$('progress').value=0;$('download').style.display='none';
    let wroteInput=false;
    try{
      await loadEngine();
-     if(!fileBytesReady||!selectedFileBytes)throw new Error('The source video is no longer available. Select it again and retry.');
      $('timelineStatus').textContent='Preparing source video for sequence rendering…';
-     await ffmpeg.writeFile(inputName,selectedFileBytes.slice());wroteInput=true;
+     await ffmpeg.writeFile(inputName,sourceBytesSnapshot.slice());wroteInput=true;
      let hasAudio=false;
      if(includeAudio){
        const probeMessages=[];
