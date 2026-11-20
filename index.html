@@ -1402,7 +1402,8 @@ $('addBatchJobs').addEventListener('click',()=>{
   $('batchStatus').textContent='Added '+formats.length+' format job(s) from the current trim.';
   renderCreatorBatch();
 });
-$('clearBatch').addEventListener('click',()=>{if(creatorBatchRunning)return;sequenceClips.length=0;sequenceSelected=-1;if(Array.isArray(project.timeline))for(const raw of project.timeline.slice(0,30)){const start=Number(raw.start),end=Number(raw.end);if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end<=start)continue;sequenceClips.push({id:Date.now()+Math.random(),name:safeProjectName(raw.name||'Timeline clip'),start,end,sourceName:String(raw.sourceName||'')});}renderSequenceTimeline();\n    creatorBatch.forEach(x=>{if(x.downloadUrl)URL.revokeObjectURL(x.downloadUrl)});creatorBatch.length=0;$('batchDownloads').innerHTML='';renderCreatorBatch();});
+$('clearBatch').addEventListener('click',()=>{if(creatorBatchRunning)return;sequenceClips.length=0;sequenceSelected=-1;if(Array.isArray(project.timeline))for(const raw of project.timeline.slice(0,30)){const start=Number(raw.start),end=Number(raw.end);if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end<=start)continue;sequenceClips.push({id:Date.now()+Math.random(),name:safeProjectName(raw.name||'Timeline clip'),start,end,sourceName:String(raw.sourceName||'')});}renderSequenceTimeline();
+    creatorBatch.forEach(x=>{if(x.downloadUrl)URL.revokeObjectURL(x.downloadUrl)});creatorBatch.length=0;$('batchDownloads').innerHTML='';renderCreatorBatch();});
 function waitForCreatorExport(){
   return new Promise(resolve=>{creatorBatchResolve=resolve;creatorBatchSuccess=false;$('export').click();if(!busy&&!creatorBatchResolve){resolve({ok:false});}});
 }
