@@ -275,6 +275,29 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
             <div class="momentlist" id="clipProfiles"></div>
           </div>
           <div class="formatbox">
+          <div class="formatbox" id="advancedTimeline">
+            <div class="smarttitle">▰ ADVANCED CLIP TIMELINE · V3.5</div>
+            <p class="hint">Build a sequence from multiple moments in the same source video. Add the current trim, reorder segments, select a segment to edit its in/out points, and preview the full sequence.</p>
+            <div class="timeline-toolbar">
+              <button type="button" id="timelineAdd" disabled>＋ Add current trim</button>
+              <button type="button" class="secondary" id="timelinePlay" disabled>▶ Play sequence</button>
+              <button type="button" class="secondary" id="timelineStop" disabled>■ Stop</button>
+            </div>
+            <div class="timeline-track-wrap"><div class="timeline-track" id="timelineTrack"><div class="timeline-empty">Add a clip to start building your sequence.</div></div></div>
+            <div class="timeline-meta" id="timelineMeta">0 clips · 0:00 total</div>
+            <div class="timeline-actions">
+              <button type="button" class="secondary" id="timelineDuplicate" disabled>Duplicate selected</button>
+              <button type="button" class="secondary" id="timelineRemove" disabled>Remove selected</button>
+              <button type="button" class="secondary" id="timelineClear" disabled>Clear timeline</button>
+            </div>
+            <div class="timeline-actions">
+              <button type="button" class="secondary" id="timelineUp" disabled>← Move earlier</button>
+              <button type="button" class="secondary" id="timelineDown" disabled>Move later →</button>
+              <button type="button" id="timelineLoad" disabled>Load into editor</button>
+            </div>
+            <p class="modehint">Sequence preview plays selected source ranges in order. Export each segment using the existing batch export tools; a single stitched sequence MP4 is not part of this release.</p>
+            <div class="smartstatus" id="timelineStatus" aria-live="polite">Timeline is empty.</div>
+          </div>
             <div class="smarttitle">PORTABLE CREATOR PROJECT</div>
             <p class="hint">Save your trim, output settings, captions and batch queue in a .clipforge project file. Original video and audio files are not embedded; reselect the source video when reopening.</p>
             <div class="actions"><button type="button" id="saveCreatorProject">↓ Save project file</button><label class="filebtn secondary" for="openCreatorProject">Open project file<input id="openCreatorProject" type="file" accept=".clipforge,.json,application/json" style="display:none"></label></div>
@@ -291,7 +314,7 @@ progress{width:100%;height:7px;margin-top:10px;accent-color:var(--purple);displa
     <button type="button" class="dock-nav" id="dockEdit"><span>✂</span>Edit</button>
     <button type="button" class="dock-export" id="dockExport" disabled>Export MP4 ↗</button>
   </nav>
-  <div class="foot">CLIPFORGE AI · V3.4 · MOBILE CREATOR EXPERIENCE</div>
+  <div class="foot">CLIPFORGE AI · V3.5 · ADVANCED TIMELINE EXPERIENCE</div>
 </div>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -1379,7 +1402,7 @@ $('addBatchJobs').addEventListener('click',()=>{
   $('batchStatus').textContent='Added '+formats.length+' format job(s) from the current trim.';
   renderCreatorBatch();
 });
-$('clearBatch').addEventListener('click',()=>{if(creatorBatchRunning)return;creatorBatch.forEach(x=>{if(x.downloadUrl)URL.revokeObjectURL(x.downloadUrl)});creatorBatch.length=0;$('batchDownloads').innerHTML='';renderCreatorBatch();});
+$('clearBatch').addEventListener('click',()=>{if(creatorBatchRunning)return;sequenceClips.length=0;sequenceSelected=-1;if(Array.isArray(project.timeline))for(const raw of project.timeline.slice(0,30)){const start=Number(raw.start),end=Number(raw.end);if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end<=start)continue;sequenceClips.push({id:Date.now()+Math.random(),name:safeProjectName(raw.name||'Timeline clip'),start,end,sourceName:String(raw.sourceName||'')});}renderSequenceTimeline();\n    creatorBatch.forEach(x=>{if(x.downloadUrl)URL.revokeObjectURL(x.downloadUrl)});creatorBatch.length=0;$('batchDownloads').innerHTML='';renderCreatorBatch();});
 function waitForCreatorExport(){
   return new Promise(resolve=>{creatorBatchResolve=resolve;creatorBatchSuccess=false;$('export').click();if(!busy&&!creatorBatchResolve){resolve({ok:false});}});
 }
@@ -1410,7 +1433,7 @@ $('runBatch').addEventListener('click',async()=>{
   finally{creatorBatchRunning=false;renderCreatorBatch();updateButtons();}
 });
 $('saveCreatorProject').addEventListener('click',()=>{
-  const project={format:'clipforge-project',version:1,name:safeProjectName($('batchName').value),savedAt:new Date().toISOString(),settings:{start:$('start').value,end:$('end').value,aspectRatio:$('aspectRatio').value,fitMode:$('fitMode').value,renderSize:$('renderSize').value,customWidth:$('customWidth').value,customHeight:$('customHeight').value,frameX:$('frameX').value,frameY:$('frameY').value,subtitleAnimation:$('subtitleAnimation').value,captions:subtitleItems.map(x=>({...x}))},batch:creatorBatch.map(({downloadUrl,...job})=>({...job,downloadUrl:null,status:'queued'})),clipProfiles:clipProfiles.map(p=>({...p,settings:{...p.settings,captions:p.settings.captions.map(x=>({...x}))}})),sourceName:selectedFile?.name||null,sourceSize:selectedFile?.size||null,sourceLastModified:selectedFile?.lastModified||null};
+  const project={format:'clipforge-project',version:1,name:safeProjectName($('batchName').value),savedAt:new Date().toISOString(),settings:{start:$('start').value,end:$('end').value,aspectRatio:$('aspectRatio').value,fitMode:$('fitMode').value,renderSize:$('renderSize').value,customWidth:$('customWidth').value,customHeight:$('customHeight').value,frameX:$('frameX').value,frameY:$('frameY').value,subtitleAnimation:$('subtitleAnimation').value,captions:subtitleItems.map(x=>({...x}))},batch:creatorBatch.map(({downloadUrl,...job})=>({...job,downloadUrl:null,status:'queued'})),clipProfiles:clipProfiles.map(p=>({...p,settings:{...p.settings,captions:p.settings.captions.map(x=>({...x}))}})),timeline:sequenceClips.map(x=>({...x})),sourceName:selectedFile?.name||null,sourceSize:selectedFile?.size||null,sourceLastModified:selectedFile?.lastModified||null};
   const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=project.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.clipforge';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);$('projectStatus').textContent='Project file saved. Re-select the original source video when reopening.';
 });
 $('openCreatorProject').addEventListener('change',async event=>{
