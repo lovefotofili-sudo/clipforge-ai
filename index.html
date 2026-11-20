@@ -1870,7 +1870,7 @@ window.addEventListener('unhandledrejection', (event) => {
    const filename=safeSequenceFilename($('sequenceFilename').value)+'.mp4';
    const sourceFileSnapshot=selectedFile;
    const sourceBytesSnapshot=fileBytesReady&&selectedFileBytes?selectedFileBytes:null;
-   if(!sourceFileSnapshot||!sourceBytesSnapshot)throw new Error('The source video is still being prepared. Wait for preparation to finish, then retry.');
+   if(!sourceFileSnapshot||!sourceBytesSnapshot){$('timelineStatus').textContent='The source video is still being prepared. Wait for preparation to finish, then retry.';return;}
    const inputExt=(sourceFileSnapshot.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp4';
    const inputName='clipforge-sequence-input.'+inputExt,outputName='clipforge-sequence-output.mp4';
    sequenceRenderBusy=true;stopClipPreview();stopSequencePlayback();sequenceExportButton.disabled=true;updateButtons();
@@ -1931,7 +1931,8 @@ window.addEventListener('unhandledrejection', (event) => {
      $('timelineStatus').textContent='Sequence export failed. Your timeline is still saved in this session.';
      setStatus('Sequence export failed: '+(error?.message||String(error)),'bad');
    }finally{
-     try{if(wroteInput)await ffmpeg.deleteFile(inputName);await ffmpeg.deleteFile(outputName);}catch{}
+     try{await ffmpeg.deleteFile(inputName);}catch{}
+     try{await ffmpeg.deleteFile(outputName);}catch{}
      sequenceRenderBusy=false;paintSequenceQC();updateButtons();
    }
  });
